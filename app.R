@@ -1,14 +1,18 @@
 library(shiny)
 library(shinydashboard)
+library(DT)
 
-ui <- dashboardPage(skin="red",
+ui <- dashboardPage(skin="blue",
                     
                     #add title
-                    dashboardHeader(title="Posterior Distribution for Coin Example",titleWidth=1000),
+                    dashboardHeader(title="NASA - Kepler Objects of Interest",titleWidth=1000),
                     
                     #define sidebar items
                     dashboardSidebar(sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("info")),
+                      menuItem("Data", tabName = "data", icon = icon("table")),
+                      menuItem("Data Exploration", tabName = "exploration", icon = icon("database")),
+                      menuItem("Modeling", tabName = "modeling", icon = icon("chart-line")),
                       menuItem("Application", tabName = "app", icon = icon("laptop"))
                     )),
                     
@@ -79,7 +83,9 @@ ui <- dashboardPage(skin="red",
                                          )
                                   )
                                 )
-                        )
+                        ),
+                        
+                        tabItem(tabName = "data", dataTableOutput("tableKOI"))
                       )
                     )
 )
@@ -128,6 +134,30 @@ server <- shinyServer(function(input, output) {
         
     # draw the posterior
     plot(x=x,y=dbeta(x=x,shape1=numsuccess+alphaval,shape2=n-numsuccess+betaval),main=paste("Posterior Density for Theta|Y=",numsuccess,sep=""),xlab="theta's", ylab="f(theta|y)",type="l")
+  })
+  
+  # Data subsetting
+  getData <- reactive({
+    dataKOI
+  })
+  
+  # Create table of observations    
+  output$tableKOI <- renderDataTable(server = FALSE, {
+    # Include horizontal scroll bar, render additional rows only when scrolling,
+    # include buttons for downloading in CSV and XLSX,
+    # render DT in the client to allow all data to be downloaded.
+    datatable(getData(), extensions = c('Buttons', 'Scroller', 'Select', 'SearchPanes'), selection = 'none',
+              options = list(scrollX = TRUE, 
+                             deferRender = TRUE,
+                             scrollY = 400,
+                             scroller = TRUE,
+                             dom = 'PBfrtip',
+                             buttons = list('copy', list(extend = "collection",
+                                                 buttons = c("csv", "excel"), text = "Download")),
+                             columnDefs = list(list(
+                               searchPanes = list(show = FALSE), targets = c(1:3, 5:50), header = "Test"
+                             )))
+              )
   })
 
 })
