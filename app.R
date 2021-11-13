@@ -1,6 +1,7 @@
 library(shiny)
 library(shinydashboard)
 library(DT)
+library(htmltools)
 
 ui <- dashboardPage(skin="blue",
                     
@@ -85,7 +86,10 @@ ui <- dashboardPage(skin="blue",
                                 )
                         ),
                         
-                        tabItem(tabName = "data", dataTableOutput("tableKOI"))
+                        tabItem(tabName = "data", 
+                                h2(strong("Kepler Objects of Interest (KOI)")),
+                                selectInput("select", "Select columns to display", names(dataKOI), multiple = TRUE),
+                                dataTableOutput("tableKOI"))
                       )
                     )
 )
@@ -138,26 +142,48 @@ server <- shinyServer(function(input, output) {
   
   # Data subsetting
   getData <- reactive({
-    dataKOI
+    
+    columns = names(dataKOI)
+    
+    # Stores names of user-selected columns for subsetting in output$tableKOI
+    if (!is.null(input$select)) {
+      columns = input$select
+    }
+    dataKOI[,columns,drop=FALSE]
   })
   
   # Create table of observations    
   output$tableKOI <- renderDataTable(server = FALSE, {
-    # Include horizontal scroll bar, render additional rows only when scrolling,
+    # Include horizontal and vertical scrolling, render only visible portion of data,
     # include buttons for downloading in CSV and XLSX,
-    # render DT in the client to allow all data to be downloaded.
-    datatable(getData(), extensions = c('Buttons', 'Scroller', 'Select', 'SearchPanes'), selection = 'none',
+    # render DT in the client to allow all data or filtered to be downloaded.
+    dtable <- datatable(getData(), extensions = c('Buttons', 'Scroller', 'Select', 'SearchBuilder'), selection = 'none',
               options = list(scrollX = TRUE, 
                              deferRender = TRUE,
                              scrollY = 400,
                              scroller = TRUE,
-                             dom = 'PBfrtip',
+                             dom = 'QlBfrtip',
                              buttons = list('copy', list(extend = "collection",
                                                  buttons = c("csv", "excel"), text = "Download")),
-                             columnDefs = list(list(
-                               searchPanes = list(show = FALSE), targets = c(1:3, 5:50), header = "Test"
+                             searchBuilder = list(
+                               columns = 1:ncol(getData()) # Include all columns in custom seatch builder
+
                              )))
-              )
+    # Subset the data set using SearchBuilder implementation with CSS and JS files
+    # https://www.datatables.net/extensions/searchbuilder/
+    # https://stackoverflow.com/questions/64773579/how-to-implement-datatables-option-in-shiny-r-syntax
+    dep <- htmlDependency(
+      name = "searchBuilder",
+      version = "1.0.0", 
+      src = path_to_searchBuilder,
+      script = "dataTables.searchBuilder.min.js",
+      stylesheet = "searchBuilder.dataTables.min.css",
+      all_files = FALSE
+    )
+    
+    dtable$dependencies <- c(dtable$dependencies, list(dep))
+    dtable
+              
   })
 
 })
