@@ -12,8 +12,8 @@ ui <- dashboardPage(skin="blue",
                     dashboardSidebar(sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("info")),
                       menuItem("Data", tabName = "data", icon = icon("table")),
-                      menuItem("Data Exploration", tabName = "exploration", icon = icon("database")),
-                      menuItem("Modeling", tabName = "modeling", icon = icon("chart-line")),
+                      menuItem("Data Exploration", tabName = "exploration", icon = icon("chart-line")),
+                      menuItem("Modeling", tabName = "modeling", icon = icon("laptop-code")),
                       menuItem("Application", tabName = "app", icon = icon("laptop"))
                     )),
                     
