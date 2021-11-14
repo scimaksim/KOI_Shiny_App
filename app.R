@@ -2,6 +2,9 @@ library(shiny)
 library(shinydashboard)
 library(DT)
 library(htmltools)
+library(latex2exp)
+library(tidyverse)
+library(ggrepel)
 
 ui <- dashboardPage(skin="blue",
                     
@@ -86,13 +89,45 @@ ui <- dashboardPage(skin="blue",
                                 )
                         ),
                         
+                        # Data page - scroll through data, subset the data, and export the data as a file
                         tabItem(tabName = "data", 
                                 h2(strong("Kepler Objects of Interest (KOI)")),
                                 selectInput("select", "Select columns to display", names(dataKOI), multiple = TRUE),
-                                dataTableOutput("tableKOI"))
+                                dataTableOutput("tableKOI")),
+                        
+                        # Data exploration - create numerical and graphical summaries, change the type of plot and type of summary reported,
+                        # change the variables and filter the rows to change the data in the plots/summaries
+                        tabItem(tabName = "exploration", 
+                                fluidRow(
+                                  sidebarLayout(
+                                    sidebarPanel(
+                                      sliderInput("size", "Size of Points on Graph",
+                                                  min = 1, max = 10, value = 5, step = 1),
+                                      # Checkbox to change shape based on category of KOI in the Exoplanet Archive
+                                      checkboxInput("disposition", h4("Include disposition information", style = "color:red;")),
+                                      # Checkbox to colorize points based on planet temperature
+                                      checkboxInput("temperature", h4("Display temperature gradient", style = "color:red;")),
+                                      
+                                      # Only show if "Color Code Conservation Status" is selected
+                                      conditionalPanel(condition = "input.temperature",
+                                                       checkboxInput("opacity", h5("Also change symbol based on REM sleep?")))
+                                    ),
+                                    
+                                    # Show outputs
+                                    mainPanel(
+                                      plotOutput("periodRadiusPlot")
+                                    )
+                                  )
+                                )
                       )
                     )
-)
+))
+
+#---------------------------------------------------------------------------------------------------------------------------------------
+#
+# Server logic
+#
+#---------------------------------------------------------------------------------------------------------------------------------------
 
 # Define server logic required to draw the plots
 server <- shinyServer(function(input, output) {
@@ -184,6 +219,26 @@ server <- shinyServer(function(input, output) {
     dtable$dependencies <- c(dtable$dependencies, list(dep))
     dtable
               
+  })
+  
+  # Create orbital period/radius scatter plot 
+  output$periodRadiusPlot <- renderPlot({
+    
+    # Subset data
+    periodRadData <- dataKOI %>% select(koi_period, koi_prad, koi_teq, koi_disposition) 
+    
+    # Use LaTeX to denote the standard astronomical symbol for the Earth
+    periodRadScatter <- ggplot(periodRadData, aes(x = koi_period, y = koi_prad)) +
+      geom_point(aes(color = koi_disposition), 
+                 alpha = 0.6, position = "jitter") +
+      labs(x = "Orbital period (days)", y = TeX(r'(Planet mass $(M_{E})$)'),
+           title = "Orbital period versus planetary radius", col = "Disposition") +
+      scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                    labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3)) +
+      scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                    labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
+    
+    periodRadScatter
   })
 
 })
