@@ -1,7 +1,7 @@
 # Read data from CSV file.
 # Sourced from 
 # https://exoplanetarchive.ipac.caltech.edu/docs/program_interfaces.html
-dataKOI <- read_csv("nph-nstedAPI.csv")
+dataKOI <- read_csv("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&select=*")
 
 library(DT)
 library(htmltools)

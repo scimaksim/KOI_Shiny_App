@@ -101,7 +101,7 @@ ui <- dashboardPage(skin="blue",
                         # change the variables and filter the rows to change the data in the plots/summaries
                         tabItem(tabName = "exploration", 
                                 fluidRow(
- https://exoplanetarchive.ipac.caltech.edu/applications/IceTable/downPressed.png                                 column(width = 3, tabBox(id = "plotTabs", width = 12,
+                                  column(width = 3, tabBox(id = "plotTabs", width = 12,
                                                            tabPanel("Scatter",
                                                                     h4(strong("Scatter plot options")),
                                                                     br(),
@@ -116,15 +116,21 @@ ui <- dashboardPage(skin="blue",
                                                            tabPanel("Histogram",
                                                                     h4(strong("Histogram options")),
                                                                     br(),
+                                                                    h5(strong("koi_teq:"), "Equilibrium Temperature (Kelvin)"),
+                                                                    h5(strong("koi_sma:"), "Orbit Semi-Major Axis (Astronomical Unit (au))"),
+                                                                    br(),
                                                                     # Dropdown ("variables to summarize")
                                                                     selectInput(
                                                                       inputId = "summaryVariable",
                                                                       label = "Variables to Summarize",
-                                                                      choices = c("koi_score", 
-                                                                                  "koi_prad",
-                                                                                  "koi_teq"),
+                                                                      choices = c("koi_teq",
+                                                                                  "koi_sma"),
                                                                       selected = "koi_score"
-                                                                    )
+                                                                    ),
+                                                                    checkboxInput("logAxis", h4("Use a logarithmic axis (log10)?", style = "color:black;")),
+                                                                    sliderInput("binNumber", "Number of bins",
+                                                                                min = 10, max = 75, value = 30, step = 5)
+                                                                    
                                                            ))),
                                   
                                   # Show outputs
@@ -301,14 +307,24 @@ server <- shinyServer(function(input, output) {
       
     } else if(input$plotTabs == "Histogram"){
       
-      #get filtered data
+      # Get user var selection for histogram
       selectedVar <- getDropdownChoice()
       
-      # Plot distribution of metal content, group by giant/sub-giant category.
-      histo <- ggplot(dataKOI, aes_string(x = selectedVar))
-      histo + geom_histogram() +
-        labs(x = "Stellar metallicity - [Fe/H] and [M/H]",
-             title = "The distribution of metallicity in giant and sub-giant planets") 
+      # Plot histogram
+      histo <- ggplot(dataKOI, aes_string(x = selectedVar)) +
+        geom_histogram(aes(y = ..density..), color = "#e9ecef", fill = "#69b3a2", bins = input$binNumber) +
+        labs(x = selectedVar) +
+        geom_density(adjust = 0.5, alpha = 0.5)
+      
+      # If checkbox is selected, use a log10 scle for x-axis
+      if(input$logAxis){
+        histo + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                              labels = scales::trans_format("log10", scales::math_format(10^.x)))
+      } else {
+        histo
+      }
+
+      
     }
     
   })
