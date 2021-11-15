@@ -5,6 +5,7 @@ library(htmltools)
 library(latex2exp)
 library(tidyverse)
 library(ggrepel)
+library(grid)
 
 ui <- dashboardPage(skin="blue",
                     
@@ -17,6 +18,7 @@ ui <- dashboardPage(skin="blue",
                       menuItem("Data", tabName = "data", icon = icon("table")),
                       menuItem("Data Exploration", tabName = "exploration", icon = icon("chart-line")),
                       menuItem("Modeling", tabName = "modeling", icon = icon("laptop-code")),
+                      menuItem("References", tabName = "references", icon = icon("book")),
                       menuItem("Application", tabName = "app", icon = icon("laptop"))
                     )),
                     
@@ -99,30 +101,56 @@ ui <- dashboardPage(skin="blue",
                         # change the variables and filter the rows to change the data in the plots/summaries
                         tabItem(tabName = "exploration", 
                                 fluidRow(
-                                  sidebarLayout(
-                                    sidebarPanel(
-                                      sliderInput("size", "Size of Points on Graph",
-                                                  min = 1, max = 10, value = 5, step = 1),
-                                      # Checkbox to change shape based on category of KOI in the Exoplanet Archive
-                                      checkboxInput("disposition", h4("Include disposition information", style = "color:red;")),
-                                      # Checkbox to colorize points based on planet temperature
-                                      checkboxInput("temperature", h4("Display temperature gradient", style = "color:red;")),
-                                      
-                                      # Only show if "Color Code Conservation Status" is selected
-                                      conditionalPanel(condition = "input.temperature",
-                                                       checkboxInput("opacity", h5("Also change symbol based on REM sleep?")))
-                                    ),
-                                    
-                                    # Show outputs
-                                    mainPanel(
-                                      plotOutput("periodRadiusPlot")
-                                    )
+ https://exoplanetarchive.ipac.caltech.edu/applications/IceTable/downPressed.png                                 column(width = 3, tabBox(id = "plotTabs", width = 12,
+                                                           tabPanel("Scatter",
+                                                                    h4(strong("Scatter plot options")),
+                                                                    br(),
+                                                                    # Checkbox to label excessively large planets
+                                                                    checkboxInput("radialOutliers", h4("Label radial outliers", style = "color:black;")),
+                                                                    
+                                                                    # Only show if "Label radial outliers" is selected
+                                                                    conditionalPanel(condition = "input.radialOutliers",
+                                                                                     checkboxInput("candidatesOnly", h4("Label only 'CANDIDATE' objects?",
+                                                                                                                        style = "color:black;")))
+                                                           ),
+                                                           tabPanel("Histogram",
+                                                                    h4(strong("Histogram options")),
+                                                                    br(),
+                                                                    # Dropdown ("variables to summarize")
+                                                                    selectInput(
+                                                                      inputId = "summaryVariable",
+                                                                      label = "Variables to Summarize",
+                                                                      choices = c("koi_score", 
+                                                                                  "koi_prad",
+                                                                                  "koi_teq"),
+                                                                      selected = "koi_score"
+                                                                    )
+                                                           ))),
+                                  
+                                  # Show outputs
+                                  column(width = 9, 
+                                         fluidRow(
+                                           box(width = 12, plotOutput("finalPlot"))
+                                         )
+                                  ))),
+                        
+                        # First tab content
+                        tabItem(tabName = "references",
+                                fluidRow(
+                                  #add in latex functionality if needed
+                                  withMathJax(),
+                                  
+                                  box(background="red",width=12,
+                                      h4("Lissauer, J., Dawson, R. & Tremaine, S. Advances in exoplanet science from Kepler.", em("Nature"), "513, 336–344 (2014). https://doi-org.prox.lib.ncsu.edu/10.1038/nature13781")
                                   )
                                 )
+                                
+                                
+                        )
                       )
                     )
-))
-
+                    
+)
 #---------------------------------------------------------------------------------------------------------------------------------------
 #
 # Server logic
@@ -150,10 +178,10 @@ server <- shinyServer(function(input, output) {
     plot(x=x,y=dbeta(x=x,shape1=alphaval,shape2=betaval),main="Prior Density for Theta",xlab="theta's", ylab="f(theta)",type="l")
     
   })
-
+  
   #create posterior plot  
   output$distPlot <- renderPlot({
-
+    
     #Plotting sequence
     x    <- seq(from=0,to=1,by=0.01)
     
@@ -166,11 +194,11 @@ server <- shinyServer(function(input, output) {
     
     #sample size
     n<-30
-
+    
     #set defaults if not supplied
     if (is.na(alphaval)){alphaval<-1}
     if (is.na(betaval)){betaval<-1}
-        
+    
     # draw the posterior
     plot(x=x,y=dbeta(x=x,shape1=numsuccess+alphaval,shape2=n-numsuccess+betaval),main=paste("Posterior Density for Theta|Y=",numsuccess,sep=""),xlab="theta's", ylab="f(theta|y)",type="l")
   })
@@ -193,17 +221,17 @@ server <- shinyServer(function(input, output) {
     # include buttons for downloading in CSV and XLSX,
     # render DT in the client to allow all data or filtered to be downloaded.
     dtable <- datatable(getData(), extensions = c('Buttons', 'Scroller', 'Select', 'SearchBuilder'), selection = 'none',
-              options = list(scrollX = TRUE, 
-                             deferRender = TRUE,
-                             scrollY = 400,
-                             scroller = TRUE,
-                             dom = 'QlBfrtip',
-                             buttons = list('copy', list(extend = "collection",
-                                                 buttons = c("csv", "excel"), text = "Download")),
-                             searchBuilder = list(
-                               columns = 1:ncol(getData()) # Include all columns in custom seatch builder
-
-                             )))
+                        options = list(scrollX = TRUE, 
+                                       deferRender = TRUE,
+                                       scrollY = 400,
+                                       scroller = TRUE,
+                                       dom = 'QlBfrtip',
+                                       buttons = list('copy', list(extend = "collection",
+                                                                   buttons = c("csv", "excel"), text = "Download")),
+                                       searchBuilder = list(
+                                         columns = 1:ncol(getData()) # Include all columns in custom seatch builder
+                                         
+                                       )))
     # Subset the data set using SearchBuilder implementation with CSS and JS files
     # https://www.datatables.net/extensions/searchbuilder/
     # https://stackoverflow.com/questions/64773579/how-to-implement-datatables-option-in-shiny-r-syntax
@@ -218,29 +246,73 @@ server <- shinyServer(function(input, output) {
     
     dtable$dependencies <- c(dtable$dependencies, list(dep))
     dtable
-              
+    
+  })
+  
+  getDropdownChoice <- reactive({
+    selectedVar <- input$summaryVariable
   })
   
   # Create orbital period/radius scatter plot 
-  output$periodRadiusPlot <- renderPlot({
-    
-    # Subset data
-    periodRadData <- dataKOI %>% select(koi_period, koi_prad, koi_teq, koi_disposition) 
-    
-    # Use LaTeX to denote the standard astronomical symbol for the Earth
-    periodRadScatter <- ggplot(periodRadData, aes(x = koi_period, y = koi_prad)) +
-      geom_point(aes(color = koi_disposition), 
-                 alpha = 0.6, position = "jitter") +
-      labs(x = "Orbital period (days)", y = TeX(r'(Planet mass $(M_{E})$)'),
-           title = "Orbital period versus planetary radius", col = "Disposition") +
-      scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                    labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3)) +
-      scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                    labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
-    
-    periodRadScatter
-  })
+  output$finalPlot <- renderPlot({
 
+    
+    if(input$plotTabs == "Scatter"){
+      
+      # Subset data
+      periodRadData <- dataKOI %>% select(kepoi_name, koi_period, koi_prad, koi_teq, koi_disposition) 
+      
+      # Use LaTeX to denote the standard astronomical symbol for the Earth
+      periodRadScatter <- ggplot(periodRadData, aes(x = koi_period, y = koi_prad)) +
+        geom_point(aes(color = koi_disposition), 
+                   alpha = 0.6, position = "jitter") +
+        labs(x = "Orbital period (days)", y = TeX(r'(Planet mass $(M_{E})$)'),
+             title = "Orbital period versus planetary radius", col = "Disposition") +
+        scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3)) +
+        scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4)) 
+      
+      # Label excessively large KOIs, eliminate overlapping labels
+      # using geom_text_repel from the ggrepel package.
+      # Examples provided at https://ggrepel.slowkow.com/articles/examples.html 
+      if(input$radialOutliers){
+        # Label only "CANDIDATE" objects exceeding 500 Earth radii
+        if(input$candidatesOnly){
+          periodRadScatter + geom_text_repel(aes(label = ifelse(koi_prad >= 500 & koi_disposition == "CANDIDATE", kepoi_name,'')), point.padding = 0.2,    
+                                             nudge_x = .15,
+                                             nudge_y = .5,
+                                             arrow = arrow(length = unit(0.02, "npc")),
+                                             segment.curvature = -1e-20,
+                                             segment.linetype = 6)
+          
+        } else {
+          # Label all objects exceeding R = 2000
+          periodRadScatter + geom_text_repel(aes(label = ifelse(koi_prad >= 2000, kepoi_name,'')), point.padding = 0.2,    
+                                             nudge_x = .15,
+                                             nudge_y = .5,
+                                             arrow = arrow(length = unit(0.02, "npc")),
+                                             segment.curvature = -1e-20,
+                                             segment.linetype = 6)
+        }
+      } else {
+        periodRadScatter
+      }
+      
+    } else if(input$plotTabs == "Histogram"){
+      
+      #get filtered data
+      selectedVar <- getDropdownChoice()
+      
+      # Plot distribution of metal content, group by giant/sub-giant category.
+      histo <- ggplot(dataKOI, aes_string(x = selectedVar))
+      histo + geom_histogram() +
+        labs(x = "Stellar metallicity - [Fe/H] and [M/H]",
+             title = "The distribution of metallicity in giant and sub-giant planets") 
+    }
+    
+  })
+  
 })
 
 shinyApp(ui = ui, server = server)
