@@ -99,7 +99,12 @@ ui <- dashboardPage(skin="blue",
                         
                         # Data exploration - create numerical and graphical summaries, change the type of plot and type of summary reported,
                         # change the variables and filter the rows to change the data in the plots/summaries
-                        tabItem(tabName = "exploration", 
+                        tabItem(tabName = "exploration",
+                                fluidRow(infoBox(nrow(dataKOI), "Observations", icon = icon("eye"), width = 3),
+                                         infoBox(nrow(filter(dataKOI, koi_disposition == "CONFIRMED")), "Confirmed", icon = icon("check"), color = "green", width = 3),
+                                         infoBox(nrow(filter(dataKOI, koi_disposition == "CANDIDATE")), "Candidate(s)", icon = icon("question"), color = "yellow", width = 3),
+                                         infoBox(nrow(filter(dataKOI, koi_disposition == "FALSE POSITIVE")), "False Positive", icon = icon("times-circle"), color = "red", width = 3)
+                                         ),
                                 fluidRow(
                                   column(width = 3, tabBox(id = "plotTabs", width = 12,
                                                            tabPanel("Scatter",
@@ -139,6 +144,75 @@ ui <- dashboardPage(skin="blue",
                                            box(width = 12, plotOutput("finalPlot"))
                                          )
                                   ))),
+                        
+                        # Modeling page
+                        tabItem(tabName = "modeling", 
+                                tabsetPanel(id = "modelingTabSet",
+                                  tabPanel("Information", 
+                                           fluidRow(
+                                             # Add in LaTeX functionality 
+                                             withMathJax(),
+                                             
+                                             # Three columns for each of the two items
+                                             column(4,
+                                                    #Description of App
+                                                    h1("Multiple linear regression"),
+                                                    #box to contain description
+                                                    box(background="light-blue",width=12,
+                                                        h4("This application shows the relationship between the prior distribution and the posterior distribution for a simple Bayesian model."),
+                                                        h4("The prior distribution is assumed to be a Beta distribution and the likelihood is a Binomial distribution with 30 trials (of which you can change the number of successes).  This yields a Beta distribution as the posterior. Note: As the prior distribution is in the same family as the posterior, we say the prior is conjugate for the likelihood."),
+                                                        h4("This application corresponds to an example in ",span("Mathematical Statistics and Data Analysis",style = "font-style:italic"), "section 3.5, example E, by John Rice."),
+                                                        h4("The goal of the example is to update our belief about the parameter \\(\\Theta\\) = the probability of obtaining a head when a particular coin is flipped.  The experiment is to flip the coin 30 times and observe the number of heads. The likelihood is then a binomial distribution. The prior is assumed to be a Beta distribution.")
+                                                    )
+                                             ),
+                                             column(4,
+                                                    #Description of App
+                                                    h1("Classification tree"),
+                                                    #box to contain description
+                                                    box(background="blue",width=12,
+                                                        h4("This application shows the relationship between the prior distribution and the posterior distribution for a simple Bayesian model."),
+                                                        h4("The prior distribution is assumed to be a Beta distribution and the likelihood is a Binomial distribution with 30 trials (of which you can change the number of successes).  This yields a Beta distribution as the posterior. Note: As the prior distribution is in the same family as the posterior, we say the prior is conjugate for the likelihood."),
+                                                        h4("This application corresponds to an example in ",span("Mathematical Statistics and Data Analysis",style = "font-style:italic"), "section 3.5, example E, by John Rice."),
+                                                        h4("The goal of the example is to update our belief about the parameter \\(\\Theta\\) = the probability of obtaining a head when a particular coin is flipped.  The experiment is to flip the coin 30 times and observe the number of heads. The likelihood is then a binomial distribution. The prior is assumed to be a Beta distribution.")
+                                                    )
+                                             ),
+                                             column(4,
+                                                    #Description of App
+                                                    h1("Random forest model"),
+                                                    #box to contain description
+                                                    box(background="aqua",width=12,
+                                                        h4("This application shows the relationship between the prior distribution and the posterior distribution for a simple Bayesian model."),
+                                                        h4("The prior distribution is assumed to be a Beta distribution and the likelihood is a Binomial distribution with 30 trials (of which you can change the number of successes).  This yields a Beta distribution as the posterior. Note: As the prior distribution is in the same family as the posterior, we say the prior is conjugate for the likelihood."),
+                                                        h4("This application corresponds to an example in ",span("Mathematical Statistics and Data Analysis",style = "font-style:italic"), "section 3.5, example E, by John Rice."),
+                                                        h4("The goal of the example is to update our belief about the parameter \\(\\Theta\\) = the probability of obtaining a head when a particular coin is flipped.  The experiment is to flip the coin 30 times and observe the number of heads. The likelihood is then a binomial distribution. The prior is assumed to be a Beta distribution.")
+                                                    )
+                                             ))),
+                                  tabPanel("Fitting", verbatimTextOutput("summary"),
+                                           fluidRow(
+                                             column(width = 4, 
+                                                           box(width = 12, 
+                                                               h3("Model parameters"),
+                                                               br(),
+                                                               numericInput("percentInput", label = h4("Specify the percentage (%) of data to designate for training"), value = 80),
+                                                               
+                                                               
+                                                               )
+                                                    )
+                                             ),
+                                           fluidRow(
+                                             column(width = 4,
+                                                    box(width = 12,
+                                                        h3("Multiple linear regression parameters"),
+                                                        br())),
+                                             column(width = 8,
+                                                    tabBox(id = "plotTabs", width = 12,
+                                                           tabPanel("Summary"),
+                                                           tabPanel("Plot")))
+                                           ),
+                                           ),
+                                           
+                                  tabPanel("Prediction", tableOutput("table"))
+                                )), 
                         
                         # First tab content
                         tabItem(tabName = "references",
@@ -324,7 +398,7 @@ server <- shinyServer(function(input, output) {
         histo
       }
 
-      
+    
     }
     
   })
