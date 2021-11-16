@@ -1,11 +1,29 @@
 # Read data from CSV file.
 # Sourced from 
 # https://exoplanetarchive.ipac.caltech.edu/docs/program_interfaces.html
-dataKOI <- read_csv("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&select=*")
-
 library(DT)
 library(htmltools)
+library(caret)
 
+# API call - retrieve all available columns
+dataKOI <- read_csv("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&select=*")
+
+defaultValKOI <- read_csv("nph-nstedAPI.csv")
+
+# Subset columns to exclude "CANDIDATE", "NOT DISPOSITIONED" Kepler objects,
+# remove columns containing "err" (most contains "NA"s) and columns with names.
+# Drop rows with missing values. 
+filteredKOI <- defaultValKOI %>% filter(koi_disposition == "CONFIRMED" | koi_disposition == "FALSE POSITIVE") %>%
+  select(-contains("err"), -kepler_name, -koi_score, -koi_tce_delivname) %>% drop_na()
+
+# Create dummy variables (0/1) for koi_disposition ("FALSE POSITIVE"/"CONFIRMED)
+dummies <- dummyVars(" ~ koi_disposition", data = filteredKOI)
+modelingData <- predict(dummies, newdata = filteredKOI)
+modelingData <- as_tibble(modelingData)
+filteredKOI$koi_disposition_binary <- as.factor(modelingData$koi_dispositionCONFIRMED)
+
+
+# Include SearchBuilder extension 
 dat <- data.frame(
   x = c(0, 1, 2, 3, 4),
   id = c("sub0", "sub0", "sub1", "sub1", "sub2")

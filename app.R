@@ -6,6 +6,7 @@ library(latex2exp)
 library(tidyverse)
 library(ggrepel)
 library(grid)
+library(caret)
 
 ui <- dashboardPage(skin="blue",
                     
@@ -206,8 +207,8 @@ ui <- dashboardPage(skin="blue",
                                                         br())),
                                              column(width = 8,
                                                     tabBox(id = "plotTabs", width = 12,
-                                                           tabPanel("Summary"),
-                                                           tabPanel("Plot")))
+                                                           tabPanel("Summary", verbatimTextOutput("classTree")),
+                                                           tabPanel("Plot", plotOutput("rpartPlot"))))
                                            ),
                                            ),
                                            
@@ -402,6 +403,45 @@ server <- shinyServer(function(input, output) {
     }
     
   })
+
+  #-----------------------------------------------
+  # Modeling
+  #-----------------------------------------------
+  
+  # Use user input to split filtered data into training and test sets
+  dataSplit <- reactive({
+    set.seed(100)
+    
+    dataIndex <- createDataPartition(filteredKOI$koi_disposition_binary, p = (input$percentInput/100), list = FALSE)
+    
+  })
+  
+  dataTrain <- reactive({
+    dataTrain <- filteredKOI[dataSplit(),]
+  })
+  
+  dataTest <- reactive({
+    dataTest <- filteredKOI[-dataSplit(),]
+  })
+  
+  # Create multiple linear regression model
+  rpartTrain <- reactive({
+    rpartFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
+                     koi_teq + koi_prad,
+                   data = dataTrain(),
+                   method = "rpart",
+                   preProcess = c("center", "scale"),
+                   trControl = trainControl(method = "cv", number = 5))
+  })
+  
+  output$classTree <- renderPrint({
+    rpartTrain()
+  })
+  
+  output$rpartPlot <- renderPlot({
+    plot(rpartTrain())
+  })
+  
   
 })
 
