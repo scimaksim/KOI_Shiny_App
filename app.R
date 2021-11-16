@@ -189,26 +189,35 @@ ui <- dashboardPage(skin="blue",
                                                     )
                                              ))),
                                   tabPanel("Fitting", verbatimTextOutput("summary"),
+                                           # First row
                                            fluidRow(
                                              column(width = 4, 
                                                            box(width = 12, 
-                                                               h3("Model parameters"),
+                                                               h3("Train/test data split"),
                                                                br(),
                                                                numericInput("percentInput", label = h4("Specify the percentage (%) of data to designate for training"), value = 80),
-                                                               
-                                                               
+                                                               br(),
+                                                               h3("Classification tree parameters"),
+                                                               br()
                                                                )
-                                                    )
-                                             ),
-                                           fluidRow(
-                                             column(width = 4,
-                                                    box(width = 12,
-                                                        h3("Multiple linear regression parameters"),
-                                                        br())),
+                                                    ),
                                              column(width = 8,
-                                                    tabBox(id = "plotTabs", width = 12,
+                                                    tabBox(id = "classTabs", width = 6,
                                                            tabPanel("Summary", verbatimTextOutput("classTree")),
                                                            tabPanel("Plot", plotOutput("rpartPlot"))))
+                                             ),
+                                           # Second row
+                                           fluidRow(
+                                             column(width = 4, 
+                                                    box(width = 12, 
+                                                        h3("Random forest parameters"),
+                                                        br()
+                                                    )
+                                             ),
+                                             column(width = 8,
+                                                    tabBox(id = "rfTabs", width = 6,
+                                                           tabPanel("Summary", verbatimTextOutput("rfSummary")),
+                                                           tabPanel("Plot", plotOutput("rfPlot"))))
                                            ),
                                            ),
                                            
@@ -423,7 +432,10 @@ server <- shinyServer(function(input, output) {
   dataTest <- reactive({
     dataTest <- filteredKOI[-dataSplit(),]
   })
-  
+
+#--------------------------------------------------------------------------
+# Classification tree
+#--------------------------------------------------------------------------
   # Create multiple linear regression model
   rpartTrain <- reactive({
     rpartFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
@@ -432,16 +444,43 @@ server <- shinyServer(function(input, output) {
                    method = "rpart",
                    preProcess = c("center", "scale"),
                    trControl = trainControl(method = "cv", number = 5))
+    rpartFit
   })
   
+  # Output linear regression summary
   output$classTree <- renderPrint({
     rpartTrain()
+    #confusionMatrix(predict(rpartTrain(), dataTest()$koi_disposition_binary), dataTest()$koi_disposition_binary$y)$overall["Accuracy"]
   })
   
+  # Output linear regression plot
   output$rpartPlot <- renderPlot({
     plot(rpartTrain())
   })
+
+#--------------------------------------------------------------------------
+# Random forest
+#--------------------------------------------------------------------------  
+  # Create random forest model
+  rfTrain <- reactive({
+    rfFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
+                        koi_teq + koi_prad,
+                      data = dataTrain(),
+                      method = "rf",
+                      preProcess = c("center", "scale"),
+                      trControl = trainControl(method = "cv", number = 5))
+    rfFit
+  })
   
+  # Output random forest summary
+  output$rfSummary <- renderPrint({
+    rfTrain()
+  })
+  
+  # Output random forest plot
+  output$rfPlot <- renderPlot({
+    plot(rfTrain())
+  })
   
 })
 
