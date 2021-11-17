@@ -204,7 +204,8 @@ ui <- dashboardPage(skin="blue",
                                              column(width = 8,
                                                     tabBox(id = "classTabs", width = 6,
                                                            tabPanel("Summary", verbatimTextOutput("classTree")),
-                                                           tabPanel("Plot", plotOutput("rpartPlot"))))
+                                                           tabPanel("Plot", plotOutput("rpartPlot")),
+                                                           tabPanel("Test Data Results", verbatimTextOutput("rfTestPredict"))))
                                              ),
                                            # Second row
                                            fluidRow(
@@ -217,7 +218,8 @@ ui <- dashboardPage(skin="blue",
                                              column(width = 8,
                                                     tabBox(id = "rfTabs", width = 6,
                                                            tabPanel("Summary", verbatimTextOutput("rfSummary")),
-                                                           tabPanel("Plot", plotOutput("rfPlot"))))
+                                                           tabPanel("Plot", plotOutput("rfPlot")),
+                                                           tabPanel("Test Data Results", verbatimTextOutput("rpartTestPredict"))))
                                            ),
                                            # Third row
                                            fluidRow(
@@ -230,7 +232,8 @@ ui <- dashboardPage(skin="blue",
                                              column(width = 8,
                                                     tabBox(id = "rfTabs", width = 6,
                                                            tabPanel("Summary", verbatimTextOutput("glmSummary")),
-                                                           tabPanel("Plot", plotOutput("glmPlot"))))
+                                                           tabPanel("Plot", plotOutput("glmPlot")),
+                                                           tabPanel("Test Data Results", verbatimTextOutput("glmTestPredict"))))
                                            )
                                            ),
                                            
@@ -426,9 +429,9 @@ server <- shinyServer(function(input, output) {
     
   })
 
-  #-----------------------------------------------
-  # Modeling
-  #-----------------------------------------------
+#-----------------------------------------------
+# Modeling
+#-----------------------------------------------
   
   # Use user input to split filtered data into training and test sets
   dataSplit <- reactive({
@@ -472,6 +475,13 @@ server <- shinyServer(function(input, output) {
     plot(glmTrain())
   })  
   
+  # The models should be compared on the test set and appropriate fit statistics reported.
+  output$glmTestPredict <- renderPrint({
+    predictGLM <- predict(glmTrain(), dataTest())
+    glmRMSE <- postResample(predictGLM, obs = dataTest()$koi_disposition_binary)
+    glmRMSE
+  })
+  
 #--------------------------------------------------------------------------
 # Classification tree
 #--------------------------------------------------------------------------
@@ -496,6 +506,13 @@ server <- shinyServer(function(input, output) {
   output$rpartPlot <- renderPlot({
     plot(rpartTrain())
   })
+  
+  # The models should be compared on the test set and appropriate fit statistics reported.
+  output$rpartTestPredict <- renderPrint({
+    predictRPART <- predict(rpartTrain(), dataTest())
+    rpartRMSE <- postResample(predictRPART, obs = dataTest()$koi_disposition_binary)
+    rpartRMSE
+  })
 
 #--------------------------------------------------------------------------
 # Random forest
@@ -519,6 +536,13 @@ server <- shinyServer(function(input, output) {
   # Output random forest plot
   output$rfPlot <- renderPlot({
     plot(rfTrain())
+  })
+
+  # The models should be compared on the test set and appropriate fit statistics reported.
+  output$rfTestPredict <- renderPrint({
+    predictRF <- predict(rfTrain(), dataTest())
+    rfRMSE <- postResample(predictRF, obs = dataTest()$koi_disposition_binary)
+    rfRMSE
   })
   
 })
