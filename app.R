@@ -219,6 +219,19 @@ ui <- dashboardPage(skin="blue",
                                                            tabPanel("Summary", verbatimTextOutput("rfSummary")),
                                                            tabPanel("Plot", plotOutput("rfPlot"))))
                                            ),
+                                           # Third row
+                                           fluidRow(
+                                             column(width = 4, 
+                                                    box(width = 12, 
+                                                        h3("Generalized linear regression parameters"),
+                                                        br()
+                                                    )
+                                             ),
+                                             column(width = 8,
+                                                    tabBox(id = "rfTabs", width = 6,
+                                                           tabPanel("Summary", verbatimTextOutput("glmSummary")),
+                                                           tabPanel("Plot", plotOutput("glmPlot"))))
+                                           )
                                            ),
                                            
                                   tabPanel("Prediction", tableOutput("table"))
@@ -433,10 +446,36 @@ server <- shinyServer(function(input, output) {
     dataTest <- filteredKOI[-dataSplit(),]
   })
 
+  
+#--------------------------------------------------------------------------
+# Generalized linear regression
+#--------------------------------------------------------------------------    
+  # Create generalized linear regression model
+  glmTrain <- reactive({
+    glmFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
+                        koi_teq + koi_prad,
+                      data = dataTrain(),
+                      method = "glmnet",
+                      preProcess = c("center", "scale"),
+                      trControl = trainControl(method = "cv", number = 5))
+    glmFit
+  })
+  
+  # Output generalized linear regression summary
+  output$glmSummary <- renderPrint({
+    glmTrain()
+    #confusionMatrix(predict(rpartTrain(), dataTest()$koi_disposition_binary), dataTest()$koi_disposition_binary$y)$overall["Accuracy"]
+  })
+  
+  # Output generalized linear regression plot
+  output$glmPlot <- renderPlot({
+    plot(glmTrain())
+  })  
+  
 #--------------------------------------------------------------------------
 # Classification tree
 #--------------------------------------------------------------------------
-  # Create multiple linear regression model
+  # Create classification model
   rpartTrain <- reactive({
     rpartFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
                      koi_teq + koi_prad,
@@ -447,13 +486,13 @@ server <- shinyServer(function(input, output) {
     rpartFit
   })
   
-  # Output linear regression summary
+  # Output classification tree summary
   output$classTree <- renderPrint({
     rpartTrain()
     #confusionMatrix(predict(rpartTrain(), dataTest()$koi_disposition_binary), dataTest()$koi_disposition_binary$y)$overall["Accuracy"]
   })
   
-  # Output linear regression plot
+  # Output classification tree plot
   output$rpartPlot <- renderPlot({
     plot(rpartTrain())
   })
