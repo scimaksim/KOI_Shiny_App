@@ -8,6 +8,10 @@ library(ggrepel)
 library(grid)
 library(caret)
 
+# Custom Shiny input binding for selecting model predictors, sourced from
+# https://github.com/rstudio/shiny-examples/tree/main/036-custom-input-control
+source("chooser.R")
+
 ui <- dashboardPage(skin="blue",
                     
                     #add title
@@ -189,51 +193,70 @@ ui <- dashboardPage(skin="blue",
                                                     )
                                              ))),
                                   tabPanel("Fitting", verbatimTextOutput("summary"),
-                                           # First row
+                                           # First column
+                                           fluidRow(box(width = 4,
+                                                        h3("Train/test data split"),
+                                                        br(),
+                                                        numericInput("percentInput", label = h4("Specify the percentage (%) of data to designate for training"), value = 80)
+                                                        ),
+                                                    box(width = 4,
+                                                        h3("Select predictors"),
+                                                        chooserInput("mychooser", "Available frobs", "Selected frobs",
+                                                                     colnames(filteredKOI), c(), size = 10, multiple = TRUE
+                                                        ),
+                                                        verbatimTextOutput("selection")
+                                                    ),
+                                                    box(width = 4,
+                                                        
+                                                        )
+                                                    ),
                                            fluidRow(
                                              column(width = 4, 
-                                                           box(width = 12, 
-                                                               h3("Train/test data split"),
-                                                               br(),
-                                                               numericInput("percentInput", label = h4("Specify the percentage (%) of data to designate for training"), value = 80),
-                                                               br(),
+                                                           box(width = NULL, 
                                                                h3("Classification tree parameters"),
                                                                br()
-                                                               )
-                                                    ),
-                                             column(width = 8,
-                                                    tabBox(id = "classTabs", width = 6,
+                                                               ),
+                                                    
+                                             
+                                                    tabBox(id = "classTabs", width = NULL,
                                                            tabPanel("Summary", verbatimTextOutput("classTree")),
                                                            tabPanel("Plot", plotOutput("rpartPlot")),
-                                                           tabPanel("Test Data Results", verbatimTextOutput("rfTestPredict"))))
-                                             ),
-                                           # Second row
-                                           fluidRow(
+                                                           tabPanel("Test Data Results", verbatimTextOutput("rfTestPredict")))),
+                                             
+                                           # Second column
                                              column(width = 4, 
-                                                    box(width = 12, 
+                                                    box(width = NULL, 
                                                         h3("Random forest parameters"),
                                                         br()
-                                                    )
-                                             ),
-                                             column(width = 8,
-                                                    tabBox(id = "rfTabs", width = 6,
+                                                    ),
+                                            
+                                    
+                                                    tabBox(id = "rfTabs", width = NULL,
                                                            tabPanel("Summary", verbatimTextOutput("rfSummary")),
                                                            tabPanel("Plot", plotOutput("rfPlot")),
-                                                           tabPanel("Test Data Results", verbatimTextOutput("rpartTestPredict"))))
-                                           ),
-                                           # Third row
-                                           fluidRow(
+                                                           tabPanel("Test Data Results", verbatimTextOutput("rpartTestPredict")))),
+                                           
+                                           # Third Column
+                                          
                                              column(width = 4, 
-                                                    box(width = 12, 
+                                                    box(width = NULL, 
                                                         h3("Generalized linear regression parameters"),
                                                         br()
-                                                    )
-                                             ),
-                                             column(width = 8,
-                                                    tabBox(id = "rfTabs", width = 6,
+                                                    ),
+                                             
+                                             
+                                                    tabBox(id = "rfTabs", width = NULL,
                                                            tabPanel("Summary", verbatimTextOutput("glmSummary")),
                                                            tabPanel("Plot", plotOutput("glmPlot")),
                                                            tabPanel("Test Data Results", verbatimTextOutput("glmTestPredict"))))
+                                           ),
+                                           fluidRow(
+                                             column(width = 4,
+                                                    
+                                                        # Cause all the inputs on the page to not send updates to the server until the button is pressed.
+                                                        actionButton("fit", "Fit models")
+                                                    )
+                                             
                                            )
                                            ),
                                            
@@ -432,6 +455,19 @@ server <- shinyServer(function(input, output) {
 #-----------------------------------------------
 # Modeling
 #-----------------------------------------------
+
+  # Do not fit models until actionButton is clicked
+  splitVals <- observeEvent(input$fit, {
+    
+    # Render caret formula
+    output$selection <- renderPrint({
+      predictorList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$mychooser$right, collapse="+")))
+      predictorList
+    })
+    
+  # Formula for models
+  predictorList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$mychooser$right, collapse="+")))
+
   
   # Use user input to split filtered data into training and test sets
   dataSplit <- reactive({
@@ -448,6 +484,8 @@ server <- shinyServer(function(input, output) {
   dataTest <- reactive({
     dataTest <- filteredKOI[-dataSplit(),]
   })
+  
+
 
   
 #--------------------------------------------------------------------------
@@ -455,8 +493,7 @@ server <- shinyServer(function(input, output) {
 #--------------------------------------------------------------------------    
   # Create generalized linear regression model
   glmTrain <- reactive({
-    glmFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
-                        koi_teq + koi_prad,
+    glmFit <- train(predictorList, 
                       data = dataTrain(),
                       method = "glmnet",
                       preProcess = c("center", "scale"),
@@ -487,8 +524,7 @@ server <- shinyServer(function(input, output) {
 #--------------------------------------------------------------------------
   # Create classification model
   rpartTrain <- reactive({
-    rpartFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
-                     koi_teq + koi_prad,
+    rpartFit <- train(predictorList,
                    data = dataTrain(),
                    method = "rpart",
                    preProcess = c("center", "scale"),
@@ -517,16 +553,18 @@ server <- shinyServer(function(input, output) {
 #--------------------------------------------------------------------------
 # Random forest
 #--------------------------------------------------------------------------  
+
   # Create random forest model
   rfTrain <- reactive({
-    rfFit <- train(koi_disposition_binary ~ koi_period + koi_duration + 
-                        koi_teq + koi_prad,
+    rfFit <- train(predictorList,
                       data = dataTrain(),
                       method = "rf",
                       preProcess = c("center", "scale"),
                       trControl = trainControl(method = "cv", number = 5))
     rfFit
   })
+  
+
   
   # Output random forest summary
   output$rfSummary <- renderPrint({
@@ -543,6 +581,8 @@ server <- shinyServer(function(input, output) {
     predictRF <- predict(rfTrain(), dataTest())
     rfRMSE <- postResample(predictRF, obs = dataTest()$koi_disposition_binary)
     rfRMSE
+  })
+  
   })
   
 })

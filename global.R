@@ -53,5 +53,6 @@ dep <- htmlDependency(
 
 dtable$dependencies <- c(dtable$dependencies, list(dep))
 
-dtable
+
+
 
