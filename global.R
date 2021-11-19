@@ -6,7 +6,9 @@ library(htmltools)
 library(caret)
 
 # API call - retrieve all available columns
-dataKOI <- read_csv("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&select=*")
+# dataKOI <- read_csv("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&select=*")
+dataKOI <- read_csv("nph-nstedAPI_all.csv")
+
 
 defaultValKOI <- read_csv("nph-nstedAPI.csv")
 
@@ -52,7 +54,3 @@ dep <- htmlDependency(
 )
 
 dtable$dependencies <- c(dtable$dependencies, list(dep))
-
-
-
-

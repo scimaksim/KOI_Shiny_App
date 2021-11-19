@@ -7,6 +7,8 @@ library(tidyverse)
 library(ggrepel)
 library(grid)
 library(caret)
+library(lares)
+library(data.table)
 
 # Custom Shiny input binding for selecting model predictors, sourced from
 # https://github.com/rstudio/shiny-examples/tree/main/036-custom-input-control
@@ -23,13 +25,15 @@ ui <- dashboardPage(skin="blue",
                       menuItem("Data", tabName = "data", icon = icon("table")),
                       menuItem("Data Exploration", tabName = "exploration", icon = icon("chart-line")),
                       menuItem("Modeling", tabName = "modeling", icon = icon("laptop-code")),
-                      menuItem("References", tabName = "references", icon = icon("book")),
-                      menuItem("Application", tabName = "app", icon = icon("laptop"))
+                      menuItem("References", tabName = "references", icon = icon("book"))
                     )),
                     
                     #define the body of the app
                     dashboardBody(
                       tabItems(
+#------------------------------------------------------------------------------------------------------------                        
+#-------------------------------------------About------------------------------------------------------------ 
+#------------------------------------------------------------------------------------------------------------                          
                         # First tab content
                         tabItem(tabName = "about",
                                 fluidRow(
@@ -63,53 +67,55 @@ ui <- dashboardPage(skin="blue",
                                 )
                         ),
                         
-                        #actual app layout      
-                        tabItem(tabName = "app",
-                                fluidRow(
-                                  column(width=3,
-                                         box(width=12,background="red",sliderInput("yvalue","Y=Number of Successes",min = 0,max = 30,value = 15)
-                                         ),
-                                         box(width=12,
-                                             title="Hyperparameters of the prior distribution for \\(\\Theta\\)",
-                                             background="red",
-                                             solidHeader=TRUE,
-                                             p("\\(\\frac{\\Gamma(\\alpha+\\beta)}{\\Gamma(\\alpha)\\Gamma(\\beta)}\\theta^{\\alpha-1}(1-\\theta)^{\\beta-1}\\)"),
-                                             h5("(Set to 1 if blank.)"),
-                                             numericInput("alpha",label=h5("\\(\\alpha\\) Value (> 0)"),value=1,min=0,step=0.1),
-                                             numericInput("beta",label=h5("\\(\\beta\\) Value (> 0)"),value=1,min=0,step=0.1)
-                                         )
-                                  ),
-                                  column(width=9,
-                                         fluidRow(
-                                           box(width=6,
-                                               plotOutput("priorPlot"),
-                                               br(),
-                                               h4("Prior distribution for the probability of success parameter \\(\\Theta\\).")
-                                           ),
-                                           box(width=6,
-                                               plotOutput("distPlot"),
-                                               br(),
-                                               h4("Posterior distribution for the probability of success \\(\\Theta\\).")
-                                           )
-                                         )
-                                  )
-                                )
-                        ),
-                        
+#------------------------------------------------------------------------------------------------------------                        
+#-------------------------------Data page-------------------------------------------------------------------- 
+#------------------------------------------------------------------------------------------------------------        
+
                         # Data page - scroll through data, subset the data, and export the data as a file
                         tabItem(tabName = "data", 
                                 h2(strong("Kepler Objects of Interest (KOI)")),
-                                selectInput("select", "Select columns to display", names(dataKOI), multiple = TRUE),
-                                dataTableOutput("tableKOI")),
-                        
-                        # Data exploration - create numerical and graphical summaries, change the type of plot and type of summary reported,
-                        # change the variables and filter the rows to change the data in the plots/summaries
-                        tabItem(tabName = "exploration",
                                 fluidRow(infoBox(nrow(dataKOI), "Observations", icon = icon("eye"), width = 3),
                                          infoBox(nrow(filter(dataKOI, koi_disposition == "CONFIRMED")), "Confirmed", icon = icon("check"), color = "green", width = 3),
                                          infoBox(nrow(filter(dataKOI, koi_disposition == "CANDIDATE")), "Candidate(s)", icon = icon("question"), color = "yellow", width = 3),
                                          infoBox(nrow(filter(dataKOI, koi_disposition == "FALSE POSITIVE")), "False Positive", icon = icon("times-circle"), color = "red", width = 3)
-                                         ),
+                                ),
+                                selectInput("select", "Select columns to display", names(dataKOI), multiple = TRUE),
+                                dataTableOutput("tableKOI")
+                                ),
+
+#------------------------------------------------------------------------------------------------------------                        
+#--------------------------------Data exploration------------------------------------------------------------ 
+#------------------------------------------------------------------------------------------------------------  
+                        # Data exploration - create numerical and graphical summaries, change the type of plot and type of summary reported,
+                        # change the variables and filter the rows to change the data in the plots/summaries
+                        tabItem(tabName = "exploration",
+                                tabsetPanel(id = "explorationTabSet",
+                                            tabPanel("Numerical summaries",
+                                                     # Layout inspired by Radiant - https://github.com/radiant-rstats
+                                                     column(width = 4,
+                                                            box(width = 12,
+                                                                verbatimTextOutput('out3'),
+                                                                # Subset data set to include only numeric variables
+                                                                selectInput("numColInput", "Numeric variable(s)", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = c("koi_period", "koi_duration", "koi_depth", "koi_prad", "koi_teq")),
+                                                                selectInput("applyFuncInput", "Apply function(s)", c("mean", "min", "max", "sd"), multiple=TRUE, selectize=TRUE, selected = c("n_obs", "mean", "min", "max", "sd"))
+                                                                )),
+                                                     column(width = 8,
+                                                            box(width = 12, dataTableOutput("summaryTable")))
+                                                     
+                                            ),
+                                            tabPanel("Graphical summaries",
+                                fluidRow(
+                                  column(width = 4,
+                                         box(width = NULL,
+                                             selectInput(inputId = "corrType", label = "Select a correlation plot",
+                                                         choices = c("Ranked cross-correlations",
+                                                                     "Correlation between variable and dataframe")),
+                                             plotOutput("corrPlot")
+                                             ),
+                                         
+                                         )
+                                ),
+
                                 fluidRow(
                                   column(width = 3, tabBox(id = "plotTabs", width = 12,
                                                            tabPanel("Scatter",
@@ -148,8 +154,10 @@ ui <- dashboardPage(skin="blue",
                                          fluidRow(
                                            box(width = 12, plotOutput("finalPlot"))
                                          )
-                                  ))),
-                        
+                                  ))))),
+#------------------------------------------------------------------------------------------------------------                        
+#-----------------------------------Data modeling------------------------------------------------------------ 
+#------------------------------------------------------------------------------------------------------------                          
                         # Modeling page
                         tabItem(tabName = "modeling", 
                                 tabsetPanel(id = "modelingTabSet",
@@ -221,7 +229,7 @@ ui <- dashboardPage(skin="blue",
                                                     tabBox(id = "classTabs", width = NULL,
                                                            tabPanel("Summary", verbatimTextOutput("classTree")),
                                                            tabPanel("Plot", plotOutput("rpartPlot")),
-                                                           tabPanel("Test Data Results", verbatimTextOutput("rfTestPredict")))),
+                                                           tabPanel("Accuracy (test data)", verbatimTextOutput("rfTestPredict")))),
                                              
                                            # Second column
                                              column(width = 4, 
@@ -234,7 +242,8 @@ ui <- dashboardPage(skin="blue",
                                                     tabBox(id = "rfTabs", width = NULL,
                                                            tabPanel("Summary", verbatimTextOutput("rfSummary")),
                                                            tabPanel("Plot", plotOutput("rfPlot")),
-                                                           tabPanel("Test Data Results", verbatimTextOutput("rpartTestPredict")))),
+                                                           tabPanel("Variable Importance", plotOutput("rfVarImp")),
+                                                           tabPanel("Accuracy (test data)", verbatimTextOutput("rpartTestPredict")))),
                                            
                                            # Third Column
                                           
@@ -248,7 +257,7 @@ ui <- dashboardPage(skin="blue",
                                                     tabBox(id = "rfTabs", width = NULL,
                                                            tabPanel("Summary", verbatimTextOutput("glmSummary")),
                                                            tabPanel("Plot", plotOutput("glmPlot")),
-                                                           tabPanel("Test Data Results", verbatimTextOutput("glmTestPredict"))))
+                                                           tabPanel("Accuracy (test data)", verbatimTextOutput("glmTestPredict"))))
                                            ),
                                            fluidRow(
                                              column(width = 4,
@@ -308,30 +317,6 @@ server <- shinyServer(function(input, output) {
     
   })
   
-  #create posterior plot  
-  output$distPlot <- renderPlot({
-    
-    #Plotting sequence
-    x    <- seq(from=0,to=1,by=0.01)
-    
-    #number of success from input slider
-    numsuccess <- input$yvalue
-    
-    #get alpha and beta values from input
-    alphaval<-input$alpha
-    betaval<-input$beta
-    
-    #sample size
-    n<-30
-    
-    #set defaults if not supplied
-    if (is.na(alphaval)){alphaval<-1}
-    if (is.na(betaval)){betaval<-1}
-    
-    # draw the posterior
-    plot(x=x,y=dbeta(x=x,shape1=numsuccess+alphaval,shape2=n-numsuccess+betaval),main=paste("Posterior Density for Theta|Y=",numsuccess,sep=""),xlab="theta's", ylab="f(theta|y)",type="l")
-  })
-  
   # Data subsetting
   getData <- reactive({
     
@@ -345,7 +330,7 @@ server <- shinyServer(function(input, output) {
   })
   
   # Create table of observations    
-  output$tableKOI <- renderDataTable(server = FALSE, {
+  output$tableKOI <- DT::renderDT(server = FALSE, {
     # Include horizontal and vertical scrolling, render only visible portion of data,
     # include buttons for downloading in CSV and XLSX,
     # render DT in the client to allow all data or filtered to be downloaded.
@@ -388,11 +373,8 @@ server <- shinyServer(function(input, output) {
     
     if(input$plotTabs == "Scatter"){
       
-      # Subset data
-      periodRadData <- dataKOI %>% select(kepoi_name, koi_period, koi_prad, koi_teq, koi_disposition) 
-      
       # Use LaTeX to denote the standard astronomical symbol for the Earth
-      periodRadScatter <- ggplot(periodRadData, aes(x = koi_period, y = koi_prad)) +
+      periodRadScatter <- ggplot(defaultValKOI, aes(x = koi_period, y = koi_prad)) +
         geom_point(aes(color = koi_disposition), 
                    alpha = 0.6, position = "jitter") +
         labs(x = "Orbital period (days)", y = TeX(r'(Planet mass $(M_{E})$)'),
@@ -451,10 +433,63 @@ server <- shinyServer(function(input, output) {
     }
     
   })
+  
+  getCorrChoice <- reactive({
+    corrDropdownChoice <- input$corrType
+    
+  })
+  
+  output$corrPlot <- renderPlot({
+    if(getCorrChoice() == "Ranked cross-correlations") {
+    
+    corr_cross(defaultValKOI, # name of dataset
+               max_pvalue = 0.05, # display only significant correlations (at 5% level)
+               top = 10 # display top 10 couples of variables (by correlation coefficient)
+    )
+    } else {
+      
+      corr_var(defaultValKOI, # name of dataset
+               koi_disposition_binary,
+               top = 10 # display top 10 couples of variables (by correlation coefficient)
+      )
+               
+    }
+  })
+  
+  # Columns for numeric summaries
+  chosenCol <- reactive({
+    colsChosen <- input$numColInput
+    colsChosen
+  })
 
-#-----------------------------------------------
-# Modeling
-#-----------------------------------------------
+  # Summaries for numeric summaries
+  chosenSummaries <- reactive({
+    summaries <- input$applyFuncInput
+    summaries
+  })
+  
+  # Table for numeric summaries   
+  output$summaryTable <- DT::renderDT({
+    
+    setDT(filteredKOI)
+    koiDT <- data.table()
+    
+    for (i in chosenSummaries()) {
+      koiDT <- rbind(koiDT, filteredKOI[ , lapply(.SD, i), .SDcols = chosenCol()])
+    }
+    
+    # Rename rows so they match summary name
+    rownames(koiDT) <- chosenSummaries()
+    
+    
+    summTable <- datatable(koiDT)
+    
+  })
+
+
+#------------------------------------------------------------------------------------------
+# --------------------------------Modeling-------------------------------------------------
+#------------------------------------------------------------------------------------------
 
   # Do not fit models until actionButton is clicked
   splitVals <- observeEvent(input$fit, {
@@ -503,7 +538,7 @@ server <- shinyServer(function(input, output) {
   
   # Output generalized linear regression summary
   output$glmSummary <- renderPrint({
-    glmTrain()
+    summary(glmTrain())
     #confusionMatrix(predict(rpartTrain(), dataTest()$koi_disposition_binary), dataTest()$koi_disposition_binary$y)$overall["Accuracy"]
   })
   
@@ -574,6 +609,12 @@ server <- shinyServer(function(input, output) {
   # Output random forest plot
   output$rfPlot <- renderPlot({
     plot(rfTrain())
+  })
+  
+  # A plot showing the variable importance from the random forest model
+  output$rfVarImp <- renderPlot({
+    rfImp <- varImp(rfTrain(), scale = FALSE)
+    plot(rfImp, top = 20)
   })
 
   # The models should be compared on the test set and appropriate fit statistics reported.
