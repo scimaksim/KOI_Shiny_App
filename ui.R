@@ -90,6 +90,9 @@ ui <- dashboardPage(skin="blue",
                         # change the variables and filter the rows to change the data in the plots/summaries
                         tabItem(tabName = "exploration",
                                 tabsetPanel(id = "explorationTabSet",
+                                            # -------------Numerical summaries--------------
+                                            #-----------------------------------------------
+                                            
                                             tabPanel("Numerical summaries",
                                                      # Layout inspired by Radiant - https://github.com/radiant-rstats
                                                      column(width = 4,
@@ -104,13 +107,18 @@ ui <- dashboardPage(skin="blue",
                                                             box(width = 12, DTOutput("summaryTable")))
                                                      
                                             ),
+                                            
+                                            # -------------Graphical summaries--------------
+                                            #-----------------------------------------------
+                                            
                                             tabPanel("Graphical summaries",
                                                      fluidRow(column(width = 4,
                                                                      box(width = 12,
                                                                          selectInput("selectPlotInput", label = "Plot type", 
                                                                                      choices = c("Distribution", "Density", "Scatter"), 
                                                                                      selected = "Distribution"),
-                                                                         conditionalPanel(condition = "input.selectPlotInput == 'Distribution'",
+                                                                         # Keep same variable list for distribution and density plots, but alternate between number of bins/smooth options
+                                                                         conditionalPanel(condition = "input.selectPlotInput == 'Distribution' || input.selectPlotInput == 'Density'",
                                                                                           selectInput("distributionXInput", "x variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_period"),
                                                                                           conditionalPanel(condition = "input.selectPlotInput == 'Distribution'",
                                                                                                            sliderInput("numBinsInput", "Number of bins",
@@ -118,6 +126,14 @@ ui <- dashboardPage(skin="blue",
                                                                                           conditionalPanel(condition = "input.selectPlotInput == 'Density'",
                                                                                                            sliderInput("widthBinsInput", "Smooth", 
                                                                                                                        min = 0.1, max = 3, value = 1, step = 0.1))
+                                                                                          ),
+                                                                         conditionalPanel(condition = "input.selectPlotInput == 'Scatter'",
+                                                                                          selectInput("distributionXInput", "x variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_period"),
+                                                                                          selectInput("distributionYInput", "y variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_prad"),
+                                                                                          checkboxGroupInput("scatterCheckGroup", label = "Plot options", 
+                                                                                                             choices = list("Log X" = 1, "Log Y" = 2),
+                                                                                                             selected = c(1,2)),
+                                                                                          selectInput("scatterColorVar", "Color", colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_disposition"),
                                                                                           )
                                                      )),
                                                      column(width = 8,

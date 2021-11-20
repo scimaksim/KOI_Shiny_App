@@ -207,24 +207,64 @@ server <- shinyServer(function(input, output) {
     distVars
   })
   
+  scatterYVars <- reactive({
+    yVars <- input$distributionYInput
+    yVars
+  })
+  
+  scatterColorVar <- reactive({
+    colorVar <- input$scatterColorVar
+    colorVar
+  })
+  
+  scatterLogCheck <- reactive({
+    logChoice <- input$scatterCheckGroup
+    logChoice
+  })
+  
   distributionBins <- reactive({
     distBins <- input$numBinsInput
     distBins
+  })
+  
+  densitySmooth <- reactive({
+    densSmooth <- input$widthBinsInput
+    densSmooth
   })
   
   # Create summary plots
   output$summaryPlot <- renderPlot({
     
     if (input$selectPlotInput == "Distribution") {
+      
       g <- ggplot(filteredKOI, aes_string(x = distributionVars())) +
         geom_histogram(bins = distributionBins())
+      g
     } else if (input$selectPlotInput == "Density") {
       
+      g <- ggplot(filteredKOI, aes_string(x = distributionVars())) +
+        geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5)  
+      g
     } else if (input$selectPlotInput == "Scatter") {
-     
+      
+      g <- ggplot(filteredKOI, aes_string(x = distributionVars(), y = scatterYVars())) +
+        geom_point(aes_string(color = scatterColorVar()), 
+                   alpha = 0.6, position = "jitter")
+        g
+      if (exists(1, scatterLogCheck())) {
+      g + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
+      }
+      
+      if (exists(2, scatterLogCheck())) {
+        g + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
+      }
+      
+      
     }
     
-    g
+    
     
   })
   
