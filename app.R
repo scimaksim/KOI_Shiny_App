@@ -80,7 +80,7 @@ ui <- dashboardPage(skin="blue",
                                          infoBox(nrow(filter(dataKOI, koi_disposition == "FALSE POSITIVE")), "False Positive", icon = icon("times-circle"), color = "red", width = 3)
                                 ),
                                 selectInput("select", "Select columns to display", names(dataKOI), multiple = TRUE),
-                                dataTableOutput("tableKOI")
+                                DTOutput("tableKOI")
                                 ),
 
 #------------------------------------------------------------------------------------------------------------                        
@@ -96,28 +96,32 @@ ui <- dashboardPage(skin="blue",
                                                             box(width = 12,
                                                                 verbatimTextOutput('out3'),
                                                                 # Subset data set to include only numeric variables
-                                                                selectInput("numColInput", "Numeric variable(s)", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = c("koi_period", "koi_duration", "koi_depth", "koi_prad", "koi_teq")),
-                                                                selectInput("applyFuncInput", "Apply function(s)", c("mean", "min", "max", "sd"), multiple=TRUE, selectize=TRUE, selected = c("n_obs", "mean", "min", "max", "sd"))
+                                                                selectInput("numColInput", "Numeric variable(s)", colnames(defaultValKOI), multiple=TRUE, selectize=FALSE, selected = c("koi_period", "koi_duration", "koi_depth", "koi_prad", "koi_teq")),
+                                                                selectInput("applyFuncInput", "Apply function(s)", c("mean", "median", "min", "max", "sd", "var", "sum"), multiple=TRUE, selectize=TRUE, selected = c("mean", "min", "max", "sd")),
+                                                                numericInput("roundDigitsInput", label = "Decimals", value = 1, max = 6)
                                                                 )),
                                                      column(width = 8,
-                                                            box(width = 12, dataTableOutput("summaryTable")))
+                                                            box(width = 12, DTOutput("summaryTable")))
                                                      
                                             ),
                                             tabPanel("Graphical summaries",
-                                fluidRow(
-                                  column(width = 4,
-                                         box(width = NULL,
-                                             selectInput(inputId = "corrType", label = "Select a correlation plot",
-                                                         choices = c("Ranked cross-correlations",
-                                                                     "Correlation between variable and dataframe")),
-                                             plotOutput("corrPlot")
-                                             ),
-                                         
-                                         )
-                                ),
+                                fluidRow(column(width = 4,
+                                                box(width = 12,
+                                                    selectInput("selectPlotInput", label = "Plot type", 
+                                                                choices = c("Distribution", "Density", "Scatter"), 
+                                                                selected = "Distribution"),
+                                                    conditionalPanel(condition = "input.selectPlotInput == 'Distribution'",
+                                                                     selectInput("distributionXInput", "x variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_disposition"),
+                                                                     sliderInput("numBinsInput", "Number of bins",
+                                                                                 min = 5, max = 50, value = 10, step = 5)))
+                                                
+                                                ),
+                                         column(width = 8,
+                                                box(width = 12, plotOutput("summaryPlot")))
+                                         ),                     
 
                                 fluidRow(
-                                  column(width = 3, tabBox(id = "plotTabs", width = 12,
+                                  column(width = 4, tabBox(id = "plotTabs", width = 12,
                                                            tabPanel("Scatter",
                                                                     h4(strong("Scatter plot options")),
                                                                     br(),
@@ -147,10 +151,15 @@ ui <- dashboardPage(skin="blue",
                                                                     sliderInput("binNumber", "Number of bins",
                                                                                 min = 10, max = 75, value = 30, step = 5)
                                                                     
-                                                           ))),
+                                                           ),
+                                                           tabPanel("Correlations",
+                                                                    selectInput(inputId = "corrType", label = "Select a correlation plot",
+                                                                                choices = c("Ranked cross-correlations",
+                                                                                            "Correlation between variable and dataframe")),
+                                                                    plotOutput("corrPlot")))),
                                   
                                   # Show outputs
-                                  column(width = 9, 
+                                  column(width = 8, 
                                          fluidRow(
                                            box(width = 12, plotOutput("finalPlot"))
                                          )
@@ -468,24 +477,49 @@ server <- shinyServer(function(input, output) {
     summaries
   })
   
+  numDecimals <- reactive({
+    decimals <- input$roundDigitsInput
+    decimals
+  })
+  
   # Table for numeric summaries   
   output$summaryTable <- DT::renderDT({
     
-    setDT(filteredKOI)
     koiDT <- data.table()
     
     for (i in chosenSummaries()) {
       koiDT <- rbind(koiDT, filteredKOI[ , lapply(.SD, i), .SDcols = chosenCol()])
     }
     
-    # Rename rows so they match summary name
-    rownames(koiDT) <- chosenSummaries()
+    # Transpose in order to append new vars vertically and apply rounding
+    koiDT <- t(round(koiDT, numDecimals()))
     
-    
-    summTable <- datatable(koiDT)
-    
+    # Output final table, ensure column names atch summary type
+    summTable <- datatable(koiDT, colnames = chosenSummaries())
+    summTable
   })
 
+  distributionVars <- reactive({
+    distVars <- input$distributionXInput
+    distVars
+  })
+  
+  distributionBins <- reactive({
+    distBins <- input$numBinsInput
+    distBins
+  })
+  
+  # Create summary plots
+  output$summaryPlot <- renderPlot({
+    
+    if(input$selectPlotInput == "Distribution"){
+      g <- ggplot(filteredKOI, aes(x = distributionVars())) +
+        geom_histogram(bins = distributionBins())
+    }
+    
+    g
+    
+  })
 
 #------------------------------------------------------------------------------------------
 # --------------------------------Modeling-------------------------------------------------

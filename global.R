@@ -4,6 +4,7 @@
 library(DT)
 library(htmltools)
 library(caret)
+library(tidyverse)
 
 # API call - retrieve all available columns
 # dataKOI <- read_csv("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&select=*")

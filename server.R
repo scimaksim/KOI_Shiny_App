@@ -1,0 +1,385 @@
+#---------------------------------------------------------------------------------------------------------------------------------------
+#
+# Server logic
+#
+#---------------------------------------------------------------------------------------------------------------------------------------
+library(shiny)
+library(shinydashboard)
+
+# Define server logic required to draw the plots
+server <- shinyServer(function(input, output) {
+  
+  #Create prior plot output
+  output$priorPlot<-renderPlot({
+    
+    #Plotting sequence
+    x <- seq(from=0,to=1,by=0.01)
+    
+    #get alpha and beta values from input
+    alphaval<-input$alpha
+    betaval<-input$beta
+    
+    #set defaults if not supplied
+    if (is.na(alphaval)){alphaval<-1}
+    if (is.na(betaval)){betaval<-1}
+    
+    #draw the prior distribution plot
+    plot(x=x,y=dbeta(x=x,shape1=alphaval,shape2=betaval),main="Prior Density for Theta",xlab="theta's", ylab="f(theta)",type="l")
+    
+  })
+  
+  # Data subsetting
+  getData <- reactive({
+    
+    columns = names(dataKOI)
+    
+    # Stores names of user-selected columns for subsetting in output$tableKOI
+    if (!is.null(input$select)) {
+      columns = input$select
+    }
+    dataKOI[,columns,drop=FALSE]
+  })
+  
+  # Create table of observations    
+  output$tableKOI <- DT::renderDT(server = FALSE, {
+    # Include horizontal and vertical scrolling, render only visible portion of data,
+    # include buttons for downloading in CSV and XLSX,
+    # render DT in the client to allow all data or filtered to be downloaded.
+    dtable <- datatable(getData(), extensions = c('Buttons', 'Scroller', 'Select', 'SearchBuilder'), selection = 'none',
+                        options = list(scrollX = TRUE, 
+                                       deferRender = TRUE,
+                                       scrollY = 400,
+                                       scroller = TRUE,
+                                       dom = 'QlBfrtip',
+                                       buttons = list('copy', list(extend = "collection",
+                                                                   buttons = c("csv", "excel"), text = "Download")),
+                                       searchBuilder = list(
+                                         columns = 1:ncol(getData()) # Include all columns in custom seatch builder
+                                         
+                                       )))
+    # Subset the data set using SearchBuilder implementation with CSS and JS files
+    # https://www.datatables.net/extensions/searchbuilder/
+    # https://stackoverflow.com/questions/64773579/how-to-implement-datatables-option-in-shiny-r-syntax
+    dep <- htmlDependency(
+      name = "searchBuilder",
+      version = "1.0.0", 
+      src = path_to_searchBuilder,
+      script = "dataTables.searchBuilder.min.js",
+      stylesheet = "searchBuilder.dataTables.min.css",
+      all_files = FALSE
+    )
+    
+    dtable$dependencies <- c(dtable$dependencies, list(dep))
+    dtable
+    
+  })
+  
+  getDropdownChoice <- reactive({
+    selectedVar <- input$summaryVariable
+  })
+  
+  # Create orbital period/radius scatter plot 
+  output$finalPlot <- renderPlot({
+    
+    
+    if(input$plotTabs == "Scatter"){
+      
+      # Use LaTeX to denote the standard astronomical symbol for the Earth
+      periodRadScatter <- ggplot(defaultValKOI, aes(x = koi_period, y = koi_prad)) +
+        geom_point(aes(color = koi_disposition), 
+                   alpha = 0.6, position = "jitter") +
+        labs(x = "Orbital period (days)", y = TeX(r'(Planet mass $(M_{E})$)'),
+             title = "Orbital period versus planetary radius", col = "Disposition") +
+        scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3)) +
+        scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4)) 
+      
+      # Label excessively large KOIs, eliminate overlapping labels
+      # using geom_text_repel from the ggrepel package.
+      # Examples provided at https://ggrepel.slowkow.com/articles/examples.html 
+      if(input$radialOutliers){
+        # Label only "CANDIDATE" objects exceeding 500 Earth radii
+        if(input$candidatesOnly){
+          periodRadScatter + geom_text_repel(aes(label = ifelse(koi_prad >= 500 & koi_disposition == "CANDIDATE", kepoi_name,'')), point.padding = 0.2,    
+                                             nudge_x = .15,
+                                             nudge_y = .5,
+                                             arrow = arrow(length = unit(0.02, "npc")),
+                                             segment.curvature = -1e-20,
+                                             segment.linetype = 6)
+          
+        } else {
+          # Label all objects exceeding R = 2000
+          periodRadScatter + geom_text_repel(aes(label = ifelse(koi_prad >= 2000, kepoi_name,'')), point.padding = 0.2,    
+                                             nudge_x = .15,
+                                             nudge_y = .5,
+                                             arrow = arrow(length = unit(0.02, "npc")),
+                                             segment.curvature = -1e-20,
+                                             segment.linetype = 6)
+        }
+      } else {
+        periodRadScatter
+      }
+      
+    } else if(input$plotTabs == "Histogram"){
+      
+      # Get user var selection for histogram
+      selectedVar <- getDropdownChoice()
+      
+      # Plot histogram
+      histo <- ggplot(dataKOI, aes_string(x = selectedVar)) +
+        geom_histogram(aes(y = ..density..), color = "#e9ecef", fill = "#69b3a2", bins = input$binNumber) +
+        labs(x = selectedVar) +
+        geom_density(adjust = 0.5, alpha = 0.5)
+      
+      # If checkbox is selected, use a log10 scle for x-axis
+      if(input$logAxis){
+        histo + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                              labels = scales::trans_format("log10", scales::math_format(10^.x)))
+      } else {
+        histo
+      }
+      
+      
+    }
+    
+  })
+  
+  getCorrChoice <- reactive({
+    corrDropdownChoice <- input$corrType
+    
+  })
+  
+  output$corrPlot <- renderPlot({
+    if(getCorrChoice() == "Ranked cross-correlations") {
+      
+      corr_cross(defaultValKOI, # name of dataset
+                 max_pvalue = 0.05, # display only significant correlations (at 5% level)
+                 top = 10 # display top 10 couples of variables (by correlation coefficient)
+      )
+    } else {
+      
+      corr_var(defaultValKOI, # name of dataset
+               koi_disposition_binary,
+               top = 10 # display top 10 couples of variables (by correlation coefficient)
+      )
+      
+    }
+  })
+  
+  # Columns for numeric summaries
+  chosenCol <- reactive({
+    colsChosen <- input$numColInput
+    colsChosen
+  })
+  
+  # Summaries for numeric summaries
+  chosenSummaries <- reactive({
+    summaries <- input$applyFuncInput
+    summaries
+  })
+  
+  numDecimals <- reactive({
+    decimals <- input$roundDigitsInput
+    decimals
+  })
+  
+  # Table for numeric summaries   
+  output$summaryTable <- DT::renderDT({
+    
+    setDT(filteredKOI)
+    koiDT <- data.table()
+    
+    for (i in chosenSummaries()) {
+      koiDT <- rbind(koiDT, filteredKOI[ , lapply(.SD, i), .SDcols = chosenCol()])
+    }
+    
+    # Transpose in order to append new vars vertically and apply rounding
+    koiDT <- t(round(koiDT, numDecimals()))
+    
+    # Output final table, ensure column names atch summary type
+    summTable <- datatable(koiDT, colnames = chosenSummaries())
+    summTable
+  })
+  
+  distributionVars <- reactive({
+    distVars <- input$distributionXInput
+    distVars
+  })
+  
+  distributionBins <- reactive({
+    distBins <- input$numBinsInput
+    distBins
+  })
+  
+  # Create summary plots
+  output$summaryPlot <- renderPlot({
+    
+    if (input$selectPlotInput == "Distribution") {
+      g <- ggplot(filteredKOI, aes_string(x = distributionVars())) +
+        geom_histogram(bins = distributionBins())
+    } else if (input$selectPlotInput == "Density") {
+      
+    } else if (input$selectPlotInput == "Scatter") {
+     
+    }
+    
+    g
+    
+  })
+  
+  
+  
+  
+#-------------------------------------------------------------------------------------------------------------------------------------------  
+#-------------------------------------------------------------------------------------------------------------------------------------------  
+#-------------------------------------------------------------------------------------------------------------------------------------------  
+#-------------------------------------------------------------------------------------------------------------------------------------------  
+  
+  
+  
+  
+  
+  
+  #------------------------------------------------------------------------------------------
+  # --------------------------------Modeling-------------------------------------------------
+  #------------------------------------------------------------------------------------------
+  
+  # Do not fit models until actionButton is clicked
+  splitVals <- observeEvent(input$fit, {
+    
+    # Render caret formula
+    output$selection <- renderPrint({
+      predictorList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$mychooser$right, collapse="+")))
+      predictorList
+    })
+    
+    # Formula for models
+    predictorList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$mychooser$right, collapse="+")))
+    
+    
+    # Use user input to split filtered data into training and test sets
+    dataSplit <- reactive({
+      set.seed(100)
+      
+      dataIndex <- createDataPartition(filteredKOI$koi_disposition_binary, p = (input$percentInput/100), list = FALSE)
+      
+    })
+    
+    dataTrain <- reactive({
+      dataTrain <- filteredKOI[dataSplit(),]
+    })
+    
+    dataTest <- reactive({
+      dataTest <- filteredKOI[-dataSplit(),]
+    })
+    
+    
+    
+    
+    #--------------------------------------------------------------------------
+    # Generalized linear regression
+    #--------------------------------------------------------------------------    
+    # Create generalized linear regression model
+    glmTrain <- reactive({
+      glmFit <- train(predictorList, 
+                      data = dataTrain(),
+                      method = "glmnet",
+                      preProcess = c("center", "scale"),
+                      trControl = trainControl(method = "cv", number = 5))
+      glmFit
+    })
+    
+    # Output generalized linear regression summary
+    output$glmSummary <- renderPrint({
+      summary(glmTrain())
+      #confusionMatrix(predict(rpartTrain(), dataTest()$koi_disposition_binary), dataTest()$koi_disposition_binary$y)$overall["Accuracy"]
+    })
+    
+    # Output generalized linear regression plot
+    output$glmPlot <- renderPlot({
+      plot(glmTrain())
+    })  
+    
+    # The models should be compared on the test set and appropriate fit statistics reported.
+    output$glmTestPredict <- renderPrint({
+      predictGLM <- predict(glmTrain(), dataTest())
+      glmRMSE <- postResample(predictGLM, obs = dataTest()$koi_disposition_binary)
+      glmRMSE
+    })
+    
+    #--------------------------------------------------------------------------
+    # Classification tree
+    #--------------------------------------------------------------------------
+    # Create classification model
+    rpartTrain <- reactive({
+      rpartFit <- train(predictorList,
+                        data = dataTrain(),
+                        method = "rpart",
+                        preProcess = c("center", "scale"),
+                        trControl = trainControl(method = "cv", number = 5))
+      rpartFit
+    })
+    
+    # Output classification tree summary
+    output$classTree <- renderPrint({
+      rpartTrain()
+      #confusionMatrix(predict(rpartTrain(), dataTest()$koi_disposition_binary), dataTest()$koi_disposition_binary$y)$overall["Accuracy"]
+    })
+    
+    # Output classification tree plot
+    output$rpartPlot <- renderPlot({
+      plot(rpartTrain())
+    })
+    
+    # The models should be compared on the test set and appropriate fit statistics reported.
+    output$rpartTestPredict <- renderPrint({
+      predictRPART <- predict(rpartTrain(), dataTest())
+      rpartRMSE <- postResample(predictRPART, obs = dataTest()$koi_disposition_binary)
+      rpartRMSE
+    })
+    
+#--------------------------------------------------------------------------
+# Random forest
+#--------------------------------------------------------------------------  
+    
+    # Create random forest model
+    rfTrain <- reactive({
+      rfFit <- train(predictorList,
+                     data = dataTrain(),
+                     method = "rf",
+                     preProcess = c("center", "scale"),
+                     trControl = trainControl(method = "cv", number = 5))
+      rfFit
+    })
+    
+    
+    
+    # Output random forest summary
+    output$rfSummary <- renderPrint({
+      rfTrain()
+    })
+    
+    # Output random forest plot
+    output$rfPlot <- renderPlot({
+      plot(rfTrain())
+    })
+    
+    # A plot showing the variable importance from the random forest model
+    output$rfVarImp <- renderPlot({
+      rfImp <- varImp(rfTrain(), scale = FALSE)
+      plot(rfImp, top = 20)
+    })
+    
+    # The models should be compared on the test set and appropriate fit statistics reported.
+    output$rfTestPredict <- renderPrint({
+      predictRF <- predict(rfTrain(), dataTest())
+      rfRMSE <- postResample(predictRF, obs = dataTest()$koi_disposition_binary)
+      rfRMSE
+    })
+    
+  })
+  
+})
+
+
