@@ -309,11 +309,17 @@ ui <- dashboardPage(skin="blue",
                                                                   )
                                                               ),
                                                        column(width = 8,
-                                                              box(width = 12,
-                                                                  "Summary", verbatimTextOutput("glmCandidatePredict")))
+                                                              tabsetPanel(id = "predictionTabSet",
+                                                                          tabPanel("Raw predictions",
+                                                                                   box(width = 12,
+                                                                                       DTOutput("glmCandidatePredict")
+                                                                                       )
+                                                                                   ),
+                                                                          tabPanel("Data table", DTOutput("confirmedTable"))
+                                                                          )
                                                      ))
                                             
-                                )), 
+                                ))), 
                         
                         # First tab content
                         tabItem(tabName = "references",

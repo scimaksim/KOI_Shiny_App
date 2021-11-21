@@ -355,13 +355,18 @@ server <- shinyServer(function(input, output) {
       glmRMSE
     })
     
-    # The models should be compared on the test set and appropriate fit statistics reported.
-    output$glmCandidatePredict <- renderPrint({
-      predictCandidateGLM <- predict(glmTrain(), filteredCandidateKOI)
-      predictCandidateGLM
+    
+    output$glmCandidatePredict <- renderDT({
+      predictCandidateGLM <- predict(glmTrain(), filteredCandidateKOI, type = "raw")
+      df <- data.frame(predictCandidateGLM, filteredCandidateKOI)
+      datatable(df)
     })
     
     
+    output$confirmedTable <- renderDT({
+      filteredCandidateKOI$confirmed <- as.integer(glmCandidatePredict())
+      datatable(filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, filteredCandidateKOI$confirmed)
+    })
     
     #--------------------------------------------------------------------------
     # Classification tree
