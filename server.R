@@ -237,32 +237,35 @@ server <- shinyServer(function(input, output) {
     
     if (input$selectPlotInput == "Distribution") {
       
-      g <- ggplot(filteredKOI, aes_string(x = distributionVars())) +
+      g <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
         geom_histogram(bins = distributionBins())
       g
     } else if (input$selectPlotInput == "Density") {
       
-      g <- ggplot(filteredKOI, aes_string(x = distributionVars())) +
+      g <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
         geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5)  
       g
     } else if (input$selectPlotInput == "Scatter") {
       
-      g <- ggplot(filteredKOI, aes_string(x = distributionVars(), y = scatterYVars())) +
+      g <- ggplot(defaultValKOI, aes_string(x = distributionVars(), y = scatterYVars())) +
         geom_point(aes_string(color = scatterColorVar()), 
                    alpha = 0.6, position = "jitter")
-        g
-      if (exists(1, scatterLogCheck())) {
-      g + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+      
+      # If "Log X" is selected  
+      if (1 %in% scatterLogCheck()) {
+      g <- g + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                       labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
       }
       
-      if (exists(2, scatterLogCheck())) {
-        g + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+      # If "Log Y" is selected
+      if (2 %in% scatterLogCheck()) {
+        g <- g + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                       labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
       }
       
-      
     }
+    
+    g
     
     
     
@@ -314,7 +317,11 @@ server <- shinyServer(function(input, output) {
       dataTest <- filteredKOI[-dataSplit(),]
     })
     
-    
+    # Prediction tab - react to model choice
+    predictionModelSelect <- reactive({
+      predModel <- input$predictionModel 
+        predModel
+    })
     
     
     #--------------------------------------------------------------------------
@@ -347,6 +354,14 @@ server <- shinyServer(function(input, output) {
       glmRMSE <- postResample(predictGLM, obs = dataTest()$koi_disposition_binary)
       glmRMSE
     })
+    
+    # The models should be compared on the test set and appropriate fit statistics reported.
+    output$glmCandidatePredict <- renderPrint({
+      predictCandidateGLM <- predict(glmTrain(), filteredCandidateKOI)
+      predictCandidateGLM
+    })
+    
+    
     
     #--------------------------------------------------------------------------
     # Classification tree

@@ -10,6 +10,8 @@ library(caret)
 library(lares)
 library(data.table)
 
+#install.packages("glmnet")
+
 # Custom Shiny input binding for selecting model predictors, sourced from
 # https://github.com/rstudio/shiny-examples/tree/main/036-custom-input-control
 source("chooser.R")
@@ -17,7 +19,7 @@ source("chooser.R")
 ui <- dashboardPage(skin="blue",
                     
                     #add title
-                    dashboardHeader(title="NASA - Kepler Objects of Interest",titleWidth=1000),
+                    dashboardHeader(title=strong("NASA - Kepler Objects of Interest"),titleWidth=1000),
                     
                     #define sidebar items
                     dashboardSidebar(sidebarMenu(
@@ -131,8 +133,7 @@ ui <- dashboardPage(skin="blue",
                                                                                           selectInput("distributionXInput", "x variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_period"),
                                                                                           selectInput("distributionYInput", "y variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_prad"),
                                                                                           checkboxGroupInput("scatterCheckGroup", label = "Plot options", 
-                                                                                                             choices = list("Log X" = 1, "Log Y" = 2),
-                                                                                                             selected = c(1,2)),
+                                                                                                             choices = list("Log X" = 1, "Log Y" = 2)),
                                                                                           selectInput("scatterColorVar", "Color", colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_disposition"),
                                                                                           )
                                                      )),
@@ -298,7 +299,20 @@ ui <- dashboardPage(skin="blue",
                                                      )
                                             ),
                                             
-                                            tabPanel("Prediction", tableOutput("table"))
+                                            tabPanel("Prediction", 
+                                                     fluidRow(
+                                                       column(width = 4,
+                                                              box(width = 12,
+                                                                  selectInput("predictionModel", label = "Prediction model", 
+                                                                              choices = c("Generalized linear regression" = 1, "Classification tree" = 2, "Random forest" = 3), 
+                                                                              selected = 1)
+                                                                  )
+                                                              ),
+                                                       column(width = 8,
+                                                              box(width = 12,
+                                                                  "Summary", verbatimTextOutput("glmCandidatePredict")))
+                                                     ))
+                                            
                                 )), 
                         
                         # First tab content
