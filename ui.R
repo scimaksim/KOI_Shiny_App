@@ -47,11 +47,14 @@ ui <- dashboardPage(skin="blue",
                                          #Description of App
                                          h1("What does this app do?"),
                                          #box to contain description
-                                         box(background="red",width=12,
-                                             h4("This application shows the relationship between the prior distribution and the posterior distribution for a simple Bayesian model."),
-                                             h4("The prior distribution is assumed to be a Beta distribution and the likelihood is a Binomial distribution with 30 trials (of which you can change the number of successes).  This yields a Beta distribution as the posterior. Note: As the prior distribution is in the same family as the posterior, we say the prior is conjugate for the likelihood."),
-                                             h4("This application corresponds to an example in ",span("Mathematical Statistics and Data Analysis",style = "font-style:italic"), "section 3.5, example E, by John Rice."),
-                                             h4("The goal of the example is to update our belief about the parameter \\(\\Theta\\) = the probability of obtaining a head when a particular coin is flipped.  The experiment is to flip the coin 30 times and observe the number of heads. The likelihood is then a binomial distribution. The prior is assumed to be a Beta distribution.")
+                                         box(background="blue",width=12,
+                                             h4("This application explores the ", span("cumulative", style = "font-style:italic"), "database of Kepler Objects of Interest (KOI) in the NASA Exoplanet Archive. 'The intent of the cumulative table is to provide the most accurate dispositions and stellar and planetary information for all KOIs in one place.'"),
+                                             h4("Kepler's was the 'first space mission to search for Earth-sized and smaller planets in the habitable zone of other stars in our neighborhood of the galaxy'. KOIs are 'well vetted, periodic, transit-like events in the Kepler data'."),
+                                             h4("'The cumulative table is created algorithmically, following simple rules. The information for each KOI is pulled from the preferred activity table based on two priority lists. One priority list (Disposition Priority) indicates the activity table from which the disposition (e.g., CANDIDATE or FALSE POSITIVE) has been pulled. If the object is not dispositioned in the highest priority activity table for a specific KOI, then it is pulled from the next highest priority activity table, and so on. In this way the cumulative table contains the most current disposition for each KOI. The second priority list (Transit-Fit Priority) indicates where the remaining information for each KOI (e.g., the transit fits, stellar properties and vetting statistics) was obtained. The activity table with reliable transit fits to the longest data set is given priority for the cumulative table. This will not necessarily provide the best fit for every individual KOI, but gives the most reliable fits overall. The current Disposition Priority order is: Q1-Q17 DR 25 Supplemental, Q1-Q17 DR 25, Q1-Q17 DR 24, Q1-Q16, Q1-Q12, Q1-Q8, Q1-Q6. The current Transit-Fit Priority order is: Q1-Q17 DR 25, Q1-17 DR 24, Q1-Q16, Q1-Q12, Q1-Q8, Q1-Q6, and Q1-Q17 DR 25 Supplemental.
+
+ Additional information is available '", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/docs/PurposeOfKOITable.html#cumulative", "here.")),
+                                             h4("A description for each data column is available ", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/docs/API_kepcandidate_columns.html", "here.")),
+                                             
                                          )
                                   ),
                                   
@@ -59,13 +62,17 @@ ui <- dashboardPage(skin="blue",
                                          #How to use the app
                                          h1("How to use the app?"),
                                          #box to contain description
-                                         box(background="red",width=12,
-                                             h4("The controls for the app are located to the left and the visualizations are available on the right."),
-                                             h4("To change the number of successes observed (for example the number of coins landing head side up), the slider on the top left can be used."),
-                                             h4("To change the prior distribution, the hyperparameters can be set using the input boxes on the left.  The changes in this distribution can be seen on the first graph."),
-                                             h4("The resulting changes to the posterior distribution can be seen on the second graph.")
+                                         box(background="blue",width=12,
+                                             h4("The controls for this application are located on the left."),
+                                             h4("The ", strong("Data"), " page allows users to scroll through the data set, subset the data, and save the (possibly subsetted) data as a CSV file."),
+                                             h4("The ", strong("Data Exploration"), " page allows users to create numerical and graphical summaries, change the type of plot and type of summary reported, and change the variables and filter the rows to change the data in the plots/summaries."),
+                                             h4("The ", strong("Modeling"), " page allows users to fit three supervised learning models. On this page, the ", strong("Modeling Info"), " tab explains the three modeling approaches.", "The ", strong("Model Fitting"), " tab allows users to split the data into training and test sets, to choose model settings, and to view corresponding model statistics.", "The ", strong("Prediction"), " tab gives users a way to use one of the models for prediction.")
                                          )
                                   )
+                                ),
+                                fluidRow(
+                                  column(6,
+                                         img(src='logos.png', height="50%", width="50%"))
                                 )
                         ),
                         
