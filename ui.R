@@ -217,10 +217,10 @@ ui <- dashboardPage(skin="blue",
                                                               h1("Classification tree"),
                                                               #box to contain description
                                                               box(background="blue",width=12,
-                                                                  h4("This application shows the relationship between the prior distribution and the posterior distribution for a simple Bayesian model."),
-                                                                  h4("The prior distribution is assumed to be a Beta distribution and the likelihood is a Binomial distribution with 30 trials (of which you can change the number of successes).  This yields a Beta distribution as the posterior. Note: As the prior distribution is in the same family as the posterior, we say the prior is conjugate for the likelihood."),
-                                                                  h4("This application corresponds to an example in ",span("Mathematical Statistics and Data Analysis",style = "font-style:italic"), "section 3.5, example E, by John Rice."),
-                                                                  h4("The goal of the example is to update our belief about the parameter \\(\\Theta\\) = the probability of obtaining a head when a particular coin is flipped.  The experiment is to flip the coin 30 times and observe the number of heads. The likelihood is then a binomial distribution. The prior is assumed to be a Beta distribution.")
+                                                                  h4("With classification trees, we are predicting group membership (e.g. 'CONFIRMED' or 'FALSE POSITIVE' planets ) rather than the value of a continuous variable."),
+                                                                  h4("We scour our predictor space to find the optimal split, but we must first establish our definition of 'optimal'. Residual sums of squares, as measures of performance in a given region, are not ideal for classification."),
+                                                                  h4("Instead, for a binary response, we use the Gini index, $$2p(1-p)$$ or deviance, $$-2plog(p)-2(1-p)log(1-p)$$ where ", span("p",style = "font-style:italic"), " is the probability of correct classification."),
+                                                                  h4("Both measures are minimized when ", span("p",style = "font-style:italic"), " is near 0 or 1 and should be weighed based on the number of observations in a given node.")
                                                               )
                                                        ),
                                                        column(4,
