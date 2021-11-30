@@ -371,12 +371,19 @@ server <- shinyServer(function(input, output) {
     #--------------------------------------------------------------------------
     # Classification tree
     #--------------------------------------------------------------------------
+    
+    complexityReactive <- reactive({
+      cp <- expand.grid(cp = input$complexityInput)
+      cp
+    })
+    
     # Create classification model
     rpartTrain <- reactive({
       rpartFit <- train(predictorList,
                         data = dataTrain(),
                         method = "rpart",
                         preProcess = c("center", "scale"),
+                        tuneGrid = complexityReactive(),
                         trControl = trainControl(method = "cv", number = 5))
       rpartFit
     })
@@ -402,6 +409,16 @@ server <- shinyServer(function(input, output) {
 #--------------------------------------------------------------------------
 # Random forest
 #--------------------------------------------------------------------------  
+    mtryReactive <- reactive({
+      mtry <- expand.grid(.mtry = input$mtryInput)
+      mtry
+    })
+    
+    ntreeReactive <- reactive({
+      ntrees <- input$nTreeInput
+      ntrees
+    })
+    
     
     # Create random forest model
     rfTrain <- reactive({
@@ -409,7 +426,9 @@ server <- shinyServer(function(input, output) {
                      data = dataTrain(),
                      method = "rf",
                      preProcess = c("center", "scale"),
-                     trControl = trainControl(method = "cv", number = 5))
+                     tuneGrid = mtryReactive(),
+                     trControl = trainControl(method = "cv", number = 5),
+                     ntree = ntreeReactive())
       rfFit
     })
     

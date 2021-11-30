@@ -10,7 +10,8 @@ library(caret)
 library(lares)
 library(data.table)
 
-#install.packages("glmnet")
+# install.packages("shiny", "shinydashboard", "DT", "htmltools", "latex2exp", "tidyverse", 
+# "ggrepel", "grid", "caret", "lares", "data.table", "glmnet", "rpart", "randomForest")
 
 # Custom Shiny input binding for selecting model predictors, sourced from
 # https://github.com/rstudio/shiny-examples/tree/main/036-custom-input-control
@@ -54,7 +55,7 @@ ui <- dashboardPage(skin="blue",
 
  Additional information is available '", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/docs/PurposeOfKOITable.html#cumulative", "here.")),
                                              h4("A description for each data column is available ", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/docs/API_kepcandidate_columns.html", "here.")),
-                                             
+                                             img(src='logos.png', height="75%", width="75%")
                                          )
                                   ),
                                   
@@ -69,10 +70,6 @@ ui <- dashboardPage(skin="blue",
                                              h4("The ", strong("Modeling"), " page allows users to fit three supervised learning models. On this page, the ", strong("Modeling Info"), " tab explains the three modeling approaches.", "The ", strong("Model Fitting"), " tab allows users to split the data into training and test sets, to choose model settings, and to view corresponding model statistics.", "The ", strong("Prediction"), " tab gives users a way to use one of the models for prediction.")
                                          )
                                   )
-                                ),
-                                fluidRow(
-                                  column(6,
-                                         img(src='logos.png', height="50%", width="50%"))
                                 )
                         ),
                         
@@ -259,7 +256,10 @@ ui <- dashboardPage(skin="blue",
                                                        column(width = 4, 
                                                               box(width = NULL, 
                                                                   h3("Classification tree parameters"),
-                                                                  br()
+                                                                  br(),
+                                                                  splitLayout(
+                                                                    numericInput("complexityInput", label = "Complexity:", value = 0.001)
+                                                                  )
                                                               ),
                                                               
                                                               
@@ -272,7 +272,13 @@ ui <- dashboardPage(skin="blue",
                                                        column(width = 4, 
                                                               box(width = NULL, 
                                                                   h3("Random forest parameters"),
-                                                                  br()
+                                                                  br(),
+                                                                  splitLayout(
+                                                                    numericInput("mtryInput", label = "mtry:", value = 1),
+                                                                    numericInput("nTreeInput", label = "# of trees:", value = 100)
+                                                                  )
+                                                                  
+                                                                    
                                                               ),
                                                               
                                                               
@@ -328,7 +334,7 @@ ui <- dashboardPage(skin="blue",
                                             
                                 ))), 
                         
-                        # First tab content
+                        # References
                         tabItem(tabName = "references",
                                 fluidRow(
                                   #add in latex functionality if needed
