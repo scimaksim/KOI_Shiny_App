@@ -207,7 +207,8 @@ ui <- dashboardPage(skin="blue",
                                                               box(background="olive",width=12,
                                                                   h4("Generalized linear models are useful for accommodating non-numeric responses (e.g. nominal, ordinal) and responses that may stem from non-normal distributions. Any distribution which falls into the exponential family of densities has a generalized linear model that may apply."),
                                                                   h4("Generally, we can look at a link function ", span("g",style = "font-style:italic"), " for different types of data such that $$g(u)=\\beta_{0}+\\beta_{1}x_{1}+\\beta_{2}x_{2}+...+\\beta_{p}x_{p}$$ where ", span("u",style = "font-style:italic"), "is the mean for the set of ", span("x",style = "font-style:italic"), " values used. In other words, the link function is converting the expected value of our response to a linear predictor scale."),
-                                                                  h4("Each distribution in a generalized linear model has an associated link function. A handful of such functions are listed ", tags$a(href="https://en.wikipedia.org/wiki/Generalized_linear_model#Link_function", "here.", style = "color: red;"))
+                                                                  h4("Each distribution in a generalized linear model has an associated link function. A handful of such functions are listed ", tags$a(href="https://en.wikipedia.org/wiki/Generalized_linear_model#Link_function", "here.", style = "color: red;")),
+                                                                  h4("The downside of GLMs is that they may be difficult to interpret due to factors such as confounding.")
                                                               )
                                                        ),
                                                        column(4,
@@ -218,7 +219,8 @@ ui <- dashboardPage(skin="blue",
                                                                   h4("With classification trees, we are predicting group membership (e.g. 'CONFIRMED' or 'FALSE POSITIVE' planets ) rather than the value of a continuous variable."),
                                                                   h4("We scour our predictor space to find the optimal split, but we must first establish our definition of 'optimal'. Residual sums of squares, as measures of performance in a given region, are not ideal for classification."),
                                                                   h4("Instead, for a binary response, we use the Gini index, $$2p(1-p)$$ or deviance, $$-2plog(p)-2(1-p)log(1-p)$$ where ", span("p",style = "font-style:italic"), " is the probability of correct classification."),
-                                                                  h4("Both measures are minimized when ", span("p",style = "font-style:italic"), " is near 0 or 1 and should be weighed based on the number of observations in a given node.")
+                                                                  h4("Both measures are minimized when ", span("p",style = "font-style:italic"), " is near 0 or 1 and should be weighed based on the number of observations in a given node."),
+                                                                  h4("Classification trees are simple to understand and their output is easy to interpret. Their predictors do not need to be scaled, and we do not need to specify interaction terms. On the other hand, small changes in data can vastly change a tree (high variance) and some form of pruning is usually necessary.")
                                                               )
                                                        ),
                                                        column(4,
@@ -230,7 +232,8 @@ ui <- dashboardPage(skin="blue",
                                                                   h4("The method still requires us to fit a tree for each of our bootstrap samples and average the results. If there is a strong predictor in our data set, every tree will likely use that predictor for its first split, making them highly correlated with one another. This is not ideal for reducing variation through averaging, since high reduction in variation requires that everything be independent of one another."),
                                                                   h4("Often, we can improve our test error rate by averaging our trees only after disaggregating them."),
                                                                   h4("How many predictors should we include when doing a particular tree fit? For classification trees, the rule of thumb is to set $$m = \\sqrt{p}$$ as our number of included predictors. For a regression model, use $$m = \\frac{p}{3}$$"),
-                                                                  h4("In practice, we can fit trees for many different values of ", span("m",style = "font-style:italic"), " and select the best one based on the out-of-bag (OOB) error rate.")
+                                                                  h4("In practice, we can fit trees for many different values of ", span("m",style = "font-style:italic"), " and select the best one based on the out-of-bag (OOB) error rate."),
+                                                                  h4("Random forest models are advantageous in that, by using many decision trees, they tend to reduce overfitting and variance, thereby gaining in prediction accuracy. However, can no longer pinpoint which variable we are splitting upon, thereby losing interpretability.")
                                                               )
                                                        ))),
                                             tabPanel("Fitting", verbatimTextOutput("summary"),
