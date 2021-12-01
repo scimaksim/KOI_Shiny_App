@@ -202,18 +202,16 @@ ui <- dashboardPage(skin="blue",
                                                        
                                                        # Three columns for each of the two items
                                                        column(4,
-                                                              #Description of App
-                                                              h1("Multiple linear regression"),
-                                                              #box to contain description
-                                                              box(background="light-blue",width=12,
-                                                                  h4("This application shows the relationship between the prior distribution and the posterior distribution for a simple Bayesian model."),
-                                                                  h4("The prior distribution is assumed to be a Beta distribution and the likelihood is a Binomial distribution with 30 trials (of which you can change the number of successes).  This yields a Beta distribution as the posterior. Note: As the prior distribution is in the same family as the posterior, we say the prior is conjugate for the likelihood."),
-                                                                  h4("This application corresponds to an example in ",span("Mathematical Statistics and Data Analysis",style = "font-style:italic"), "section 3.5, example E, by John Rice."),
-                                                                  h4("The goal of the example is to update our belief about the parameter \\(\\Theta\\) = the probability of obtaining a head when a particular coin is flipped.  The experiment is to flip the coin 30 times and observe the number of heads. The likelihood is then a binomial distribution. The prior is assumed to be a Beta distribution.")
+                                                              #Description of generalized linear models
+                                                              h1("Generalized linear regression"),
+                                                              box(background="olive",width=12,
+                                                                  h4("Generalized linear models are useful for accommodating non-numeric responses (e.g. nominal, ordinal) and responses that may stem from non-normal distributions. Any distribution which falls into the exponential family of densities has a generalized linear model that may apply."),
+                                                                  h4("Generally, we can look at a link function ", span("g",style = "font-style:italic"), " for different types of data such that $$g(u)=\\beta_{0}+\\beta_{1}x_{1}+\\beta_{2}x_{2}+...+\\beta_{p}x_{p}$$ where ", span("u",style = "font-style:italic"), "is the mean for the set of ", span("x",style = "font-style:italic"), " values used. In other words, the link function is converting the expected value of our response to a linear predictor scale."),
+                                                                  h4("Each distribution in a generalized linear model has an associated link function. A handful of such functions are listed ", tags$a(href="https://en.wikipedia.org/wiki/Generalized_linear_model#Link_function", "here.", style = "color: red;"))
                                                               )
                                                        ),
                                                        column(4,
-                                                              #Description of App
+                                                              #Description of classification trees
                                                               h1("Classification tree"),
                                                               #box to contain description
                                                               box(background="blue",width=12,
@@ -224,10 +222,10 @@ ui <- dashboardPage(skin="blue",
                                                               )
                                                        ),
                                                        column(4,
-                                                              #Description of App
+                                                              #Description of random forest model
                                                               h1("Random forest model"),
                                                               #box to contain description
-                                                              box(background="aqua",width=12,
+                                                              box(background="purple",width=12,
                                                                   h4("Random forests are an extension of bagging but, instead of including every predictor in each tree, we include only a random subset."),
                                                                   h4("The method still requires us to fit a tree for each of our bootstrap samples and average the results. If there is a strong predictor in our data set, every tree will likely use that predictor for its first split, making them highly correlated with one another. This is not ideal for reducing variation through averaging, since high reduction in variation requires that everything be independent of one another."),
                                                                   h4("Often, we can improve our test error rate by averaging our trees only after disaggregating them."),
