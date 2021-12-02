@@ -392,6 +392,42 @@ server <- shinyServer(function(input, output) {
       datatable(filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, filteredCandidateKOI$confirmed)
     })
     
+    # GLM predict tab
+    
+    # Based on example from 
+    # https://stackoverflow.com/questions/39135877/in-rshiny-ui-how-to-dynamic-show-several-numericinput-based-on-what-you-choose
+    output$predictorInput <- renderUI(
+      
+      lapply(1:length(input$glmPredictors$right),function(i){
+        
+        # Retrieve names of selected GLM predictors
+        varName <- input$glmPredictors$right[i]
+        
+        # Retreive values of aforementioned predictors in first row of observations
+        varVal <- eval(parse(text = paste0("filteredKOI$", varName, "[1]"))) 
+        
+        # Create numericInput fields with sample values
+        numericInput(inputId = paste0(input$glmPredictors$right[i], "_weight"), label = input$glmPredictors$right[i], value = varVal)
+        
+      })
+    )
+    
+    # Based on example from
+    # https://stackoverflow.com/questions/50795355/how-to-extract-the-values-of-dynamically-generated-inputs-in-shiny
+    output$score <- DT::renderDT({
+      # Obtain user's predictor values
+      values = sapply(1:length(input$glmPredictors$right), function(i) {
+        input[[ paste0(input$glmPredictors$right[i], "_weight") ]]
+      })
+      
+      # Create a data frame using user's predictor values
+      valDF <- transpose(as.data.frame(values))
+      valDF <- setNames(valDF, input$glmPredictors$right)
+      valDF
+
+      
+    })
+    
     #--------------------------------------------------------------------------
     # Classification tree
     #--------------------------------------------------------------------------
@@ -438,9 +474,7 @@ server <- shinyServer(function(input, output) {
       })
       
     }
-    
-    
-    
+
     
     # Output decision tree plot
     output$rpartDecisionTree <- renderPlot({
@@ -546,24 +580,7 @@ server <- shinyServer(function(input, output) {
       rfRMSE <- postResample(predictRF, obs = dataTest()$koi_disposition_binary)
       rfRMSE
     })
-    
-    #------Predict tab-------
-    
-    
-    # Based on example from 
-    # https://stackoverflow.com/questions/39135877/in-rshiny-ui-how-to-dynamic-show-several-numericinput-based-on-what-you-choose
-    output$predictorInput <- renderUI(
-      
-      lapply(1:length(input$glmPredictors$right),function(i){
-     
-         numericInput(paste0('num', i), label = h3(input$glmPredictors$right[i]), value = 1)
-      
-      })
-      
-      
-    )
-    
-      
+
 
   })
   

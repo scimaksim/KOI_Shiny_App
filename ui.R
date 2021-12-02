@@ -345,7 +345,8 @@ ui <- dashboardPage(skin="blue",
                                                                               choices = c("Generalized linear regression" = 1, "Classification tree" = 2, "Random forest" = 3), 
                                                                               selected = 1),
                                                                   conditionalPanel(condition = "input.predictionModel == 1",
-                                                                                   uiOutput("predictorInput"))
+                                                                                   uiOutput("predictorInput"),
+                                                                                   DTOutput('score'))
                                                                                    
                                                                   )
                                                                                    
