@@ -9,9 +9,10 @@ library(grid)
 library(caret)
 library(lares)
 library(data.table)
+library(rpart.plot)
 
 # install.packages("shiny", "shinydashboard", "DT", "htmltools", "latex2exp", "tidyverse", 
-# "ggrepel", "grid", "caret", "lares", "data.table", "glmnet", "rpart", "randomForest")
+# "ggrepel", "grid", "caret", "lares", "data.table", "rpart.plot", "glmnet", "rpart", "randomForest")
 
 # Custom Shiny input binding for selecting model predictors, sourced from
 # https://github.com/rstudio/shiny-examples/tree/main/036-custom-input-control
@@ -254,8 +255,17 @@ ui <- dashboardPage(skin="blue",
                                                               
                                                               box(width = 12,
                                                                   h4("Classification tree parameters"),
+                                                                  radioButtons("classTune", label = h4("Hyperparameter tuning"),
+                                                                               choices = list("Auto (tuneLength)" = 1, "Manual (tuneGrid)" = 2), 
+                                                                               selected = 1, inline = TRUE),
+                                                                  conditionalPanel(condition = "input.classTune == 1",
+                                                                                   splitLayout(
+                                                                                     numericInput("classTuneLengthInput", label = "# of unique values to consider:", value = 3)
+                                                                                   )),
+                                                                  conditionalPanel(condition = "input.classTune == 2",
                                                                   splitLayout(
-                                                                    numericInput("complexityInput", label = "Complexity:", value = 0.001)),
+                                                                    numericInput("complexityInput", label = "Complexity:", value = 0.05))
+                                                                  ),
                                                                   h4("Classification tree predictors"),
                                                                   chooserInput("classPredictors", "Available frobs", "Selected frobs",
                                                                                colnames(filteredKOI), size = 5, multiple = TRUE, rightChoices = c("koi_period", "koi_duration", "koi_prad", "koi_teq")
@@ -302,15 +312,17 @@ ui <- dashboardPage(skin="blue",
                                                               box(width = NULL,
                                                                   h3("Classification tree model"),
                                                                   tabBox(id = "classTabs", width = NULL,
-                                                                         tabPanel("Summary", verbatimTextOutput("classTree")),
+                                                                         tabPanel("Summary (training data)", verbatimTextOutput("classTree")),
                                                                          tabPanel("Plot", plotOutput("rpartPlot")),
-                                                                         tabPanel("Accuracy (test data)", verbatimTextOutput("rfTestPredict")))),
+                                                                         tabPanel("Decision tree", plotOutput("rpartDecisionTree")),
+                                                                         tabPanel("Accuracy (test data)", verbatimTextOutput("rfTestPredict"))
+                                                                         )),
                                                               
                                                               
                                                               box(width = NULL,
                                                                   h3("Random forest model"),
                                                                   tabBox(id = "rfTabs", width = NULL,
-                                                                         tabPanel("Summary", verbatimTextOutput("rfSummary")),
+                                                                         tabPanel("Summary (training data)", verbatimTextOutput("rfSummary")),
                                                                          tabPanel("Plot", plotOutput("rfPlot")),
                                                                          tabPanel("Variable Importance", plotOutput("rfVarImp")),
                                                                          tabPanel("Accuracy (test data)", verbatimTextOutput("rpartTestPredict")))),
@@ -318,7 +330,7 @@ ui <- dashboardPage(skin="blue",
                                                               box(width = NULL, 
                                                                   h3("Generalized linear model"),
                                                                   tabBox(id = "rfTabs", width = NULL,
-                                                                         tabPanel("Summary", verbatimTextOutput("glmSummary")),
+                                                                         tabPanel("Summary (training data)", verbatimTextOutput("glmSummary")),
                                                                          tabPanel("Plot", plotOutput("glmPlot")),
                                                                          tabPanel("Accuracy (test data)", verbatimTextOutput("glmTestPredict"))))
                                                        )
@@ -331,7 +343,13 @@ ui <- dashboardPage(skin="blue",
                                                               box(width = 12,
                                                                   selectInput("predictionModel", label = "Prediction model", 
                                                                               choices = c("Generalized linear regression" = 1, "Classification tree" = 2, "Random forest" = 3), 
-                                                                              selected = 1)
+                                                                              selected = 1),
+                                                                  conditionalPanel(condition = "input.predictionModel == 1",
+                                                                                   lapply(1:5, function(i) {
+                                                                                     numericInput("glmCustomPredictors", label = h3("Numeric input"), value = 1)
+                                                                                   })
+                                                                  )
+                                                                                   
                                                               )
                                                        ),
                                                        column(width = 8,

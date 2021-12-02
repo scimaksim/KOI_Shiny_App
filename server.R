@@ -253,14 +253,14 @@ server <- shinyServer(function(input, output) {
       
       # If "Log X" is selected  
       if (1 %in% scatterLogCheck()) {
-      g <- g + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
+        g <- g + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                               labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
       }
       
       # If "Log Y" is selected
       if (2 %in% scatterLogCheck()) {
         g <- g + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
+                               labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
       }
       
     }
@@ -274,10 +274,10 @@ server <- shinyServer(function(input, output) {
   
   
   
-#-------------------------------------------------------------------------------------------------------------------------------------------  
-#-------------------------------------------------------------------------------------------------------------------------------------------  
-#-------------------------------------------------------------------------------------------------------------------------------------------  
-#-------------------------------------------------------------------------------------------------------------------------------------------  
+  #-------------------------------------------------------------------------------------------------------------------------------------------  
+  #-------------------------------------------------------------------------------------------------------------------------------------------  
+  #-------------------------------------------------------------------------------------------------------------------------------------------  
+  #-------------------------------------------------------------------------------------------------------------------------------------------  
   
   
   
@@ -288,7 +288,7 @@ server <- shinyServer(function(input, output) {
   # --------------------------------Modeling-------------------------------------------------
   #------------------------------------------------------------------------------------------
   
-
+  
   
   # Do not fit models until actionButton is clicked
   splitVals <- observeEvent(input$fit, {
@@ -318,6 +318,7 @@ server <- shinyServer(function(input, output) {
     rfPredList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$rfPredictors$right, collapse="+")))
     glmPredList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$glmPredictors$right, collapse="+")))
     
+    
     # Use user input to split filtered data into training and test sets
     dataSplit <- reactive({
       
@@ -337,13 +338,17 @@ server <- shinyServer(function(input, output) {
     # Prediction tab - react to model choice
     predictionModelSelect <- reactive({
       predModel <- input$predictionModel 
-        predModel
+      predModel
     })
+    
+
     
     
     #--------------------------------------------------------------------------
     # Generalized linear regression
     #--------------------------------------------------------------------------    
+
+    
     # Create generalized linear regression model
     glmTrain <- reactive({
       glmFit <- train(glmPredList, 
@@ -353,6 +358,8 @@ server <- shinyServer(function(input, output) {
                       trControl = trainControl(method = "cv", number = kFolds()))
       glmFit
     })
+    
+
     
     # Output generalized linear regression summary
     output$glmSummary <- renderPrint({
@@ -394,15 +401,50 @@ server <- shinyServer(function(input, output) {
       cp
     })
     
-    # Create classification model
-    rpartTrain <- reactive({
-      rpartFit <- train(classTreePredList,
-                        data = dataTrain(),
-                        method = "rpart",
-                        preProcess = c("center", "scale"),
-                        tuneGrid = complexityReactive(),
-                        trControl = trainControl(method = "cv", number = kFolds()))
-      rpartFit
+    # tuneLength - auto hyperparameter tuning
+    classTuneLengthReactive <- reactive({
+      classTuneLength <- input$classTuneLengthInput
+      classTuneLength
+    })
+    
+    
+    if(input$classTune == 2) {
+      # Create classification model
+      rpartTrain <- reactive({
+        rpartFit <- train(classTreePredList,
+                          data = dataTrain(),
+                          method = "rpart",
+                          preProcess = c("center", "scale"),
+                          tuneGrid = complexityReactive(),
+                          trControl = trainControl(method = "cv", number = kFolds()))
+        rpartFit
+        
+      })
+    }
+    
+    else {
+      # Create classification model
+      rpartTrain <- reactive({
+        rpartFit <- train(classTreePredList,
+                          data = dataTrain(),
+                          method = "rpart",
+                          preProcess = c("center", "scale"),
+                          tuneLength = classTuneLengthReactive(),
+                          trControl = trainControl(method = "cv", number = kFolds()))
+        rpartFit
+        
+        
+        
+      })
+      
+    }
+    
+    
+    
+    
+    # Output decision tree plot
+    output$rpartDecisionTree <- renderPlot({
+      prp(rpartTrain()$finalModel, box.palette = "Reds", tweak = 1.2)
     })
     
     # Output classification tree summary
@@ -416,6 +458,8 @@ server <- shinyServer(function(input, output) {
       plot(rpartTrain())
     })
     
+    
+    
     # The models should be compared on the test set and appropriate fit statistics reported.
     output$rpartTestPredict <- renderPrint({
       predictRPART <- predict(rpartTrain(), dataTest())
@@ -423,9 +467,9 @@ server <- shinyServer(function(input, output) {
       rpartRMSE
     })
     
-#--------------------------------------------------------------------------
-# Random forest
-#--------------------------------------------------------------------------  
+    #--------------------------------------------------------------------------
+    # Random forest
+    #--------------------------------------------------------------------------  
     # mtry - manual hyperparameter tuning (tuneGrid)
     mtryReactive <- reactive({
       mtry <- expand.grid(.mtry = input$mtryInput)
@@ -443,6 +487,7 @@ server <- shinyServer(function(input, output) {
       rfTuneLength <- input$rfTuneLengthInput
       rfTuneLength
     })
+    
     
     # Manual hyperparameter tuning (tuneGrid)
     if(input$rfTune == 2) {
@@ -471,6 +516,9 @@ server <- shinyServer(function(input, output) {
                        trControl = trainControl(method = "cv", number = kFolds()),
                        ntree = ntreeReactive())
         rfFit
+        
+        
+        
       })
     }
     
@@ -498,7 +546,7 @@ server <- shinyServer(function(input, output) {
       rfRMSE <- postResample(predictRF, obs = dataTest()$koi_disposition_binary)
       rfRMSE
     })
-    
+
   })
   
 })
