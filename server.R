@@ -288,22 +288,39 @@ server <- shinyServer(function(input, output) {
   # --------------------------------Modeling-------------------------------------------------
   #------------------------------------------------------------------------------------------
   
+
+  
   # Do not fit models until actionButton is clicked
   splitVals <- observeEvent(input$fit, {
     
+    # Seed
+    seedNum <- reactive({
+      seedVal <- input$seedInput
+      seedVal
+    })
+    
+    # Number of folds in cross validation
+    kFolds <- reactive({
+      folds <- input$foldInput
+      folds
+    })
+    
+    set.seed(seedNum())
+    
     # Render caret formula
     output$selection <- renderPrint({
-      predictorList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$mychooser$right, collapse="+")))
+      predictorList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$classPredictors$right, collapse="+")))
       predictorList
     })
     
     # Formula for models
-    predictorList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$mychooser$right, collapse="+")))
-    
+    classTreePredList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$classPredictors$right, collapse="+")))
+    rfPredList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$rfPredictors$right, collapse="+")))
+    glmPredList <- as.formula(paste0("koi_disposition_binary ~ ", paste0(input$glmPredictors$right, collapse="+")))
     
     # Use user input to split filtered data into training and test sets
     dataSplit <- reactive({
-      set.seed(100)
+      
       
       dataIndex <- createDataPartition(filteredKOI$koi_disposition_binary, p = (input$percentInput/100), list = FALSE)
       
@@ -329,11 +346,11 @@ server <- shinyServer(function(input, output) {
     #--------------------------------------------------------------------------    
     # Create generalized linear regression model
     glmTrain <- reactive({
-      glmFit <- train(predictorList, 
+      glmFit <- train(glmPredList, 
                       data = dataTrain(),
                       method = "glmnet",
                       preProcess = c("center", "scale"),
-                      trControl = trainControl(method = "cv", number = 5))
+                      trControl = trainControl(method = "cv", number = kFolds()))
       glmFit
     })
     
@@ -379,12 +396,12 @@ server <- shinyServer(function(input, output) {
     
     # Create classification model
     rpartTrain <- reactive({
-      rpartFit <- train(predictorList,
+      rpartFit <- train(classTreePredList,
                         data = dataTrain(),
                         method = "rpart",
                         preProcess = c("center", "scale"),
                         tuneGrid = complexityReactive(),
-                        trControl = trainControl(method = "cv", number = 5))
+                        trControl = trainControl(method = "cv", number = kFolds()))
       rpartFit
     })
     
@@ -409,30 +426,55 @@ server <- shinyServer(function(input, output) {
 #--------------------------------------------------------------------------
 # Random forest
 #--------------------------------------------------------------------------  
+    # mtry - manual hyperparameter tuning (tuneGrid)
     mtryReactive <- reactive({
       mtry <- expand.grid(.mtry = input$mtryInput)
       mtry
     })
     
+    # Number of trees
     ntreeReactive <- reactive({
       ntrees <- input$nTreeInput
       ntrees
     })
     
-    
-    # Create random forest model
-    rfTrain <- reactive({
-      rfFit <- train(predictorList,
-                     data = dataTrain(),
-                     method = "rf",
-                     preProcess = c("center", "scale"),
-                     tuneGrid = mtryReactive(),
-                     trControl = trainControl(method = "cv", number = 5),
-                     ntree = ntreeReactive())
-      rfFit
+    # tuneLength - auto hyperparameter tuning
+    rfTuneLengthReactive <- reactive({
+      rfTuneLength <- input$rfTuneLengthInput
+      rfTuneLength
     })
     
+    # Manual hyperparameter tuning (tuneGrid)
+    if(input$rfTune == 2) {
+      
+      # Create random forest model with tuneGrid
+      rfTrain <- reactive({
+        rfFit <- train(rfPredList,
+                       data = dataTrain(),
+                       method = "rf",
+                       preProcess = c("center", "scale"),
+                       tuneGrid = mtryReactive(),
+                       trControl = trainControl(method = "cv", number = kFolds()),
+                       ntree = ntreeReactive())
+        rfFit
+      }) }
     
+    # Auto hyperparameter tuning (tuneLength)
+    else {
+      # Create random forest model with tuneLength
+      rfTrain <- reactive({
+        rfFit <- train(rfPredList,
+                       data = dataTrain(),
+                       method = "rf",
+                       preProcess = c("center", "scale"),
+                       tuneLength = rfTuneLengthReactive(),
+                       trControl = trainControl(method = "cv", number = kFolds()),
+                       ntree = ntreeReactive())
+        rfFit
+      })
+    }
+    
+
     
     # Output random forest summary
     output$rfSummary <- renderPrint({

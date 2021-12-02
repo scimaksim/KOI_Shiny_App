@@ -23,7 +23,7 @@ ui <- dashboardPage(skin="blue",
                     dashboardHeader(title=strong("NASA - Kepler Objects of Interest"),titleWidth=1000),
                     
                     #define sidebar items
-                    dashboardSidebar(sidebarMenu(
+                    dashboardSidebar(width = 170, sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("info")),
                       menuItem("Data", tabName = "data", icon = icon("table")),
                       menuItem("Data Exploration", tabName = "exploration", icon = icon("chart-line")),
@@ -132,17 +132,17 @@ ui <- dashboardPage(skin="blue",
                                                                                           conditionalPanel(condition = "input.selectPlotInput == 'Density'",
                                                                                                            sliderInput("widthBinsInput", "Smooth", 
                                                                                                                        min = 0.1, max = 3, value = 1, step = 0.1))
-                                                                                          ),
+                                                                         ),
                                                                          conditionalPanel(condition = "input.selectPlotInput == 'Scatter'",
                                                                                           selectInput("distributionXInput", "x variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_period"),
                                                                                           selectInput("distributionYInput", "y variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_prad"),
                                                                                           checkboxGroupInput("scatterCheckGroup", label = "Plot options", 
                                                                                                              choices = list("Log X" = 1, "Log Y" = 2)),
                                                                                           selectInput("scatterColorVar", "Color", colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_disposition"),
-                                                                                          )
-                                                     )),
-                                                     column(width = 8,
-                                                            box(width = 12, plotOutput("summaryPlot")))
+                                                                         )
+                                                                     )),
+                                                              column(width = 8,
+                                                                     box(width = 12, plotOutput("summaryPlot")))
                                                      ),                     
                                                      
                                                      fluidRow(
@@ -195,6 +195,8 @@ ui <- dashboardPage(skin="blue",
                         # Modeling page
                         tabItem(tabName = "modeling", 
                                 tabsetPanel(id = "modelingTabSet",
+                                            
+                                            # Descriptions of models
                                             tabPanel("Information", 
                                                      fluidRow(
                                                        # Add in LaTeX functionality 
@@ -236,83 +238,92 @@ ui <- dashboardPage(skin="blue",
                                                                   h4("Random forest models are advantageous in that, by using many decision trees, they tend to reduce overfitting and variance, thereby gaining in prediction accuracy. However, can no longer pinpoint which variable we are splitting upon, thereby losing interpretability.")
                                                               )
                                                        ))),
+                                            
+                                            # Model fitting tab
                                             tabPanel("Fitting", verbatimTextOutput("summary"),
                                                      # First column
-                                                     fluidRow(box(width = 4,
-                                                                  h3("Train/test data split"),
-                                                                  br(),
-                                                                  numericInput("percentInput", label = h4("Specify the percentage (%) of data to designate for training"), value = 80)
-                                                     ),
-                                                     box(width = 4,
-                                                         h3("Select predictors"),
-                                                         chooserInput("mychooser", "Available frobs", "Selected frobs",
-                                                                      colnames(filteredKOI), c(), size = 10, multiple = TRUE
-                                                         ),
-                                                         verbatimTextOutput("selection")
-                                                     ),
-                                                     box(width = 4,
-                                                         
-                                                     )
-                                                     ),
                                                      fluidRow(
-                                                       column(width = 4, 
-                                                              box(width = NULL, 
-                                                                  h3("Classification tree parameters"),
-                                                                  br(),
-                                                                  splitLayout(
-                                                                    numericInput("complexityInput", label = "Complexity:", value = 0.001)
-                                                                  )
+                                                       column(width = 2,
+                                                              
+                                                              box(width = 12,
+                                                                  h3("Model settings"),
+                                                                  numericInput("percentInput", label = h4("Specify the percentage (%) of data to designate for training"), value = 80),
+                                                                  numericInput("foldInput", label = h4("k-fold cross validation (specify ", span("k",style = "font-style:italic"), ")"), value = 5),
+                                                                  numericInput("seedInput", label = h4("Set a seed for reproducibility"), value = 1234),
                                                               ),
                                                               
-                                                              
-                                                              tabBox(id = "classTabs", width = NULL,
-                                                                     tabPanel("Summary", verbatimTextOutput("classTree")),
-                                                                     tabPanel("Plot", plotOutput("rpartPlot")),
-                                                                     tabPanel("Accuracy (test data)", verbatimTextOutput("rfTestPredict")))),
-                                                       
-                                                       # Second column
-                                                       column(width = 4, 
-                                                              box(width = NULL, 
-                                                                  h3("Random forest parameters"),
-                                                                  br(),
+                                                              box(width = 12,
+                                                                  h4("Classification tree parameters"),
                                                                   splitLayout(
-                                                                    numericInput("mtryInput", label = "mtry:", value = 1),
-                                                                    numericInput("nTreeInput", label = "# of trees:", value = 100)
-                                                                  )
+                                                                    numericInput("complexityInput", label = "Complexity:", value = 0.001)),
+                                                                  h4("Classification tree predictors"),
+                                                                  chooserInput("classPredictors", "Available frobs", "Selected frobs",
+                                                                               colnames(filteredKOI), size = 5, multiple = TRUE, rightChoices = c("koi_period", "koi_duration", "koi_prad", "koi_teq")
+                                                                  ),
+                                                              ),
+                                                              
+                                                              box(width = 12,
                                                                   
-                                                                    
+                                                                  h4("Random forest parameters"),
+                                                                  radioButtons("rfTune", label = h4("Hyperparameter tuning"),
+                                                                               choices = list("Auto (tuneLength)" = 1, "Manual (tuneGrid)" = 2), 
+                                                                               selected = 1, inline = TRUE),
+                                                                  conditionalPanel(condition = "input.rfTune == 1",
+                                                                                   splitLayout(
+                                                                                     numericInput("rfTuneLengthInput", label = "# of unique values to consider:", value = 3)
+                                                                                   )),
+                                                                  conditionalPanel(condition = "input.rfTune == 2",
+                                                                                   splitLayout(
+                                                                                     numericInput("mtryInput", label = "mtry:", value = 1),
+                                                                                     numericInput("nTreeInput", label = "# of trees:", value = 100),
+                                                                                   )),
+                                                                  h4("Random forest predictors"),
+                                                                  chooserInput("rfPredictors", "Available frobs", "Selected frobs",
+                                                                               colnames(filteredKOI), size = 5, multiple = TRUE, rightChoices = c("koi_period", "koi_duration", "koi_prad", "koi_teq")
+                                                                  ),
                                                               ),
                                                               
-                                                              
-                                                              tabBox(id = "rfTabs", width = NULL,
-                                                                     tabPanel("Summary", verbatimTextOutput("rfSummary")),
-                                                                     tabPanel("Plot", plotOutput("rfPlot")),
-                                                                     tabPanel("Variable Importance", plotOutput("rfVarImp")),
-                                                                     tabPanel("Accuracy (test data)", verbatimTextOutput("rpartTestPredict")))),
-                                                       
-                                                       # Third Column
-                                                       
-                                                       column(width = 4, 
-                                                              box(width = NULL, 
-                                                                  h3("Generalized linear regression parameters"),
-                                                                  br()
+                                                              box(width = 12,
+                                                                  
+                                                                  h4("Generalized linear regression parameters"),
+                                                                  h4("GLM predictors"),
+                                                                  chooserInput("glmPredictors", "Available frobs", "Selected frobs",
+                                                                               leftChoices = colnames(filteredKOI), size = 5, multiple = TRUE, rightChoices = c("koi_period", "koi_duration", "koi_prad", "koi_teq")
+                                                                  )
                                                               ),
-                                                              
-                                                              
-                                                              tabBox(id = "rfTabs", width = NULL,
-                                                                     tabPanel("Summary", verbatimTextOutput("glmSummary")),
-                                                                     tabPanel("Plot", plotOutput("glmPlot")),
-                                                                     tabPanel("Accuracy (test data)", verbatimTextOutput("glmTestPredict"))))
-                                                     ),
-                                                     fluidRow(
-                                                       column(width = 4,
                                                               
                                                               # Cause all the inputs on the page to not send updates to the server until the button is pressed.
                                                               actionButton("fit", "Fit models")
-                                                       )
+                                                       ),
                                                        
-                                                     )
-                                            ),
+                                                       
+                                                       column(width = 10, 
+                                                              
+                                                              box(width = NULL,
+                                                                  h3("Classification tree model"),
+                                                                  tabBox(id = "classTabs", width = NULL,
+                                                                         tabPanel("Summary", verbatimTextOutput("classTree")),
+                                                                         tabPanel("Plot", plotOutput("rpartPlot")),
+                                                                         tabPanel("Accuracy (test data)", verbatimTextOutput("rfTestPredict")))),
+                                                              
+                                                              
+                                                              box(width = NULL,
+                                                                  h3("Random forest model"),
+                                                                  tabBox(id = "rfTabs", width = NULL,
+                                                                         tabPanel("Summary", verbatimTextOutput("rfSummary")),
+                                                                         tabPanel("Plot", plotOutput("rfPlot")),
+                                                                         tabPanel("Variable Importance", plotOutput("rfVarImp")),
+                                                                         tabPanel("Accuracy (test data)", verbatimTextOutput("rpartTestPredict")))),
+                                                              
+                                                              box(width = NULL, 
+                                                                  h3("Generalized linear model"),
+                                                                  tabBox(id = "rfTabs", width = NULL,
+                                                                         tabPanel("Summary", verbatimTextOutput("glmSummary")),
+                                                                         tabPanel("Plot", plotOutput("glmPlot")),
+                                                                         tabPanel("Accuracy (test data)", verbatimTextOutput("glmTestPredict"))))
+                                                       )
+                                                     )),
+                                            
                                             
                                             tabPanel("Prediction", 
                                                      fluidRow(
@@ -321,20 +332,20 @@ ui <- dashboardPage(skin="blue",
                                                                   selectInput("predictionModel", label = "Prediction model", 
                                                                               choices = c("Generalized linear regression" = 1, "Classification tree" = 2, "Random forest" = 3), 
                                                                               selected = 1)
-                                                                  )
-                                                              ),
+                                                              )
+                                                       ),
                                                        column(width = 8,
                                                               tabsetPanel(id = "predictionTabSet",
                                                                           tabPanel("Raw predictions",
                                                                                    box(width = 12,
                                                                                        DTOutput("glmCandidatePredict")
-                                                                                       )
-                                                                                   ),
+                                                                                   )
+                                                                          ),
                                                                           tabPanel("Data table", DTOutput("confirmedTable"))
-                                                                          )
-                                                     ))
-                                            
-                                ))), 
+                                                              )
+                                                       ))
+                                                     
+                                            ))), 
                         
                         # References
                         tabItem(tabName = "references",
