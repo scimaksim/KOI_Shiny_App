@@ -345,12 +345,11 @@ ui <- dashboardPage(skin="blue",
                                                                               choices = c("Generalized linear regression" = 1, "Classification tree" = 2, "Random forest" = 3), 
                                                                               selected = 1),
                                                                   conditionalPanel(condition = "input.predictionModel == 1",
-                                                                                   lapply(1:5, function(i) {
-                                                                                     numericInput("glmCustomPredictors", label = h3("Numeric input"), value = 1)
-                                                                                   })
+                                                                                   uiOutput("predictorInput"))
+                                                                                   
                                                                   )
                                                                                    
-                                                              )
+                                                              
                                                        ),
                                                        column(width = 8,
                                                               tabsetPanel(id = "predictionTabSet",

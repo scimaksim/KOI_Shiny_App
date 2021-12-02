@@ -546,6 +546,24 @@ server <- shinyServer(function(input, output) {
       rfRMSE <- postResample(predictRF, obs = dataTest()$koi_disposition_binary)
       rfRMSE
     })
+    
+    #------Predict tab-------
+    
+    
+    # Based on example from 
+    # https://stackoverflow.com/questions/39135877/in-rshiny-ui-how-to-dynamic-show-several-numericinput-based-on-what-you-choose
+    output$predictorInput <- renderUI(
+      
+      lapply(1:length(input$glmPredictors$right),function(i){
+     
+         numericInput(paste0('num', i), label = h3(input$glmPredictors$right[i]), value = 1)
+      
+      })
+      
+      
+    )
+    
+      
 
   })
   
