@@ -345,8 +345,19 @@ ui <- dashboardPage(skin="blue",
                                                                               choices = c("Generalized linear regression" = 1, "Classification tree" = 2, "Random forest" = 3), 
                                                                               selected = 1),
                                                                   conditionalPanel(condition = "input.predictionModel == 1",
-                                                                                   uiOutput("predictorInput"),
-                                                                                   DTOutput('score'))
+                                                                                   uiOutput("glmPredictorInput"),
+                                                                                   verbatimTextOutput("glmPrediction"),
+                                                                                   ),
+                                                                  conditionalPanel(condition = "input.predictionModel == 2",
+                                                                                   uiOutput("classPredictorInput"),
+                                                                                   verbatimTextOutput("classPrediction"),
+                                                                  ),
+                                                                  conditionalPanel(condition = "input.predictionModel == 3",
+                                                                                   uiOutput("rfPredictorInput"),
+                                                                                   verbatimTextOutput("rfPrediction"),
+                                                                  ),
+                                                                  
+                                                                  actionButton("predictButton", "Obtain prediction")
                                                                                    
                                                                   )
                                                                                    

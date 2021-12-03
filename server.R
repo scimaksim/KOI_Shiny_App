@@ -392,19 +392,21 @@ server <- shinyServer(function(input, output) {
       datatable(filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, filteredCandidateKOI$confirmed)
     })
     
-    # GLM predict tab
+    
     
     # Based on example from 
     # https://stackoverflow.com/questions/39135877/in-rshiny-ui-how-to-dynamic-show-several-numericinput-based-on-what-you-choose
-    output$predictorInput <- renderUI(
+    
+    # Customizable predictors based on GLM selections
+    output$glmPredictorInput <- renderUI(
       
       lapply(1:length(input$glmPredictors$right),function(i){
         
         # Retrieve names of selected GLM predictors
         varName <- input$glmPredictors$right[i]
         
-        # Retreive values of aforementioned predictors in first row of observations
-        varVal <- eval(parse(text = paste0("filteredKOI$", varName, "[1]"))) 
+        # Retrieve sample values from first row of "CANDIDATE" observations
+        varVal <- eval(parse(text = paste0("filteredCandidateKOI$", varName, "[1]"))) 
         
         # Create numericInput fields with sample values
         numericInput(inputId = paste0(input$glmPredictors$right[i], "_weight"), label = input$glmPredictors$right[i], value = varVal)
@@ -412,9 +414,48 @@ server <- shinyServer(function(input, output) {
       })
     )
     
+    # Customizable predictors based on selection in classification tree
+    output$classPredictorInput <- renderUI(
+      
+      lapply(1:length(input$classPredictors$right),function(i){
+        
+        # Retrieve names of selected classification tree predictors
+        varName <- input$classPredictors$right[i]
+        
+        # Retrieve sample values from first row of "CANDIDATE" observations
+        varVal <- eval(parse(text = paste0("filteredCandidateKOI$", varName, "[1]"))) 
+        
+        # Create numericInput fields with sample values
+        numericInput(inputId = paste0(input$classPredictors$right[i], "_weight"), label = input$classPredictors$right[i], value = varVal)
+        
+      })
+    )
+    
+    # Customizable predictors based on random forest selection
+    output$rfPredictorInput <- renderUI(
+      
+      lapply(1:length(input$rfPredictors$right),function(i){
+        
+        # Retrieve names of selected random forest predictors
+        varName <- input$rfPredictors$right[i]
+        
+        # Retrieve sample values from first row of "CANDIDATE" observations
+        varVal <- eval(parse(text = paste0("filteredCandidateKOI$", varName, "[1]"))) 
+        
+        # Create numericInput fields with sample values
+        numericInput(inputId = paste0(input$rfPredictors$right[i], "_weight"), label = input$rfPredictors$right[i], value = varVal)
+        
+      })
+    )
+    
+    renderPrediction <- observeEvent(input$predictButton, {
+    
+    # If GLM is selected as prediction models
+
+      
     # Based on example from
     # https://stackoverflow.com/questions/50795355/how-to-extract-the-values-of-dynamically-generated-inputs-in-shiny
-    output$score <- DT::renderDT({
+    output$glmPrediction <- renderPrint({
       # Obtain user's predictor values
       values = sapply(1:length(input$glmPredictors$right), function(i) {
         input[[ paste0(input$glmPredictors$right[i], "_weight") ]]
@@ -423,9 +464,50 @@ server <- shinyServer(function(input, output) {
       # Create a data frame using user's predictor values
       valDF <- transpose(as.data.frame(values))
       valDF <- setNames(valDF, input$glmPredictors$right)
-      valDF
-
       
+      # Predict whether KOI should be marked as "CONFIRMED" (1) or "FALSE POSITIVE" (0)
+      # and output result
+      predictGLM <- predict(glmTrain(), valDF)
+      predictGLM
+      
+    })
+    
+      
+      output$classPrediction <- renderPrint({
+        # Obtain user's predictor values
+        values = sapply(1:length(input$classPredictors$right), function(i) {
+          input[[ paste0(input$classPredictors$right[i], "_weight") ]]
+        })
+        
+        # Create a data frame using user's predictor values
+        valDF <- transpose(as.data.frame(values))
+        valDF <- setNames(valDF, input$classPredictors$right)
+        
+        # Predict whether KOI should be marked as "CONFIRMED" (1) or "FALSE POSITIVE" (0)
+        # and output result
+        predictClass <- predict(rpartTrain(), valDF)
+        predictClass
+      })
+    
+      
+      output$rfPrediction <- renderPrint({
+        # Obtain user's predictor values
+        values = sapply(1:length(input$rfPredictors$right), function(i) {
+          input[[ paste0(input$rfPredictors$right[i], "_weight") ]]
+        })
+        
+        # Create a data frame using user's predictor values
+        valDF <- transpose(as.data.frame(values))
+        valDF <- setNames(valDF, input$rfPredictors$right)
+        
+        # Predict whether KOI should be marked as "CONFIRMED" (1) or "FALSE POSITIVE" (0)
+        # and output result
+        predictRF <- predict(rfTrain(), valDF)
+        predictRF
+      })
+        
+    
+    
     })
     
     #--------------------------------------------------------------------------
