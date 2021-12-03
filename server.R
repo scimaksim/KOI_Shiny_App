@@ -169,7 +169,7 @@ server <- shinyServer(function(input, output) {
   
   # Columns for numeric summaries
   chosenCol <- reactive({
-    colsChosen <- input$numColInput
+    colsChosen <- input$dataVarChooser$right
     colsChosen
   })
   
@@ -353,7 +353,8 @@ server <- shinyServer(function(input, output) {
     glmTrain <- reactive({
       glmFit <- train(glmPredList, 
                       data = dataTrain(),
-                      method = "glm",
+                      method = "glmnet",
+                      family = "binomial",
                       preProcess = c("center", "scale"),
                       trControl = trainControl(method = "cv", number = kFolds()))
       glmFit
@@ -548,8 +549,11 @@ server <- shinyServer(function(input, output) {
     
     #------------Prediction tab------------------------
     
-    # Developed using example from
+    
+    
+    # References:
     # https://stackoverflow.com/questions/39135877/in-rshiny-ui-how-to-dynamic-show-several-numericinput-based-on-what-you-choose
+    # https://stackoverflow.com/questions/50795355/how-to-extract-the-values-of-dynamically-generated-inputs-in-shiny
     
     # Customizable predictors based on GLM selections
     output$glmPredictorInput <- renderUI(
@@ -602,10 +606,9 @@ server <- shinyServer(function(input, output) {
       })
     )
     
-    renderPrediction <- observeEvent(input$predictButton, {
- 
-      # Developed using example from
-      # https://stackoverflow.com/questions/50795355/how-to-extract-the-values-of-dynamically-generated-inputs-in-shiny
+    modelPredictions <- observeEvent(input$predictButton, {
+      
+      # Predict using GLM
       output$glmPrediction <- renderPrint({
         # Obtain user's predictor values
         values = sapply(1:length(input$glmPredictors$right), function(i) {
@@ -613,14 +616,17 @@ server <- shinyServer(function(input, output) {
         })
         
         # Create a data frame using user's predictor values
-        valDF <- transpose(as.data.frame(values))
-        valDF <- setNames(valDF, input$glmPredictors$right)
         
+        # Transpose values and names and turn into data frames
+        valNum <- transpose(as.data.frame(unlist(values)))
+        
+        # Rename columns using predictor names
+        valNum <- valNum %>% rename_at(vars(names(valNum)), ~input$glmPredictors$right)
+
         # Predict whether KOI should be marked as "CONFIRMED" (1) or "FALSE POSITIVE" (0)
         # and output result
-        predictGLM <- predict(glmTrain(), valDF)
+        predictGLM <- predict(glmTrain(), valNum, type = "prob")
         predictGLM
-        
       })
       
       # Predict using classification tree
@@ -634,9 +640,9 @@ server <- shinyServer(function(input, output) {
         valDF <- transpose(as.data.frame(values))
         valDF <- setNames(valDF, input$classPredictors$right)
         
-        # Predict whether KOI should be marked as "CONFIRMED" (1) or "FALSE POSITIVE" (0)
+        # Predict whether KOI should be marked as "CONFIRMED"Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred (1) or "FALSE POSITIVE" (0)
         # and output result
-        predictClass <- predict(rpartTrain(), valDF)
+        predictClass <- predict(rpartTrain(), valDF, type = "prob")
         predictClass
       })
       
@@ -653,14 +659,18 @@ server <- shinyServer(function(input, output) {
         
         # Predict whether KOI should be marked as "CONFIRMED" (1) or "FALSE POSITIVE" (0)
         # and output result
-        predictRF <- predict(rfTrain(), valDF)
+        predictRF <- predict(rfTrain(), valDF, type = "prob")
         predictRF
       })
-      
-      
-      
+    
     })
+
   })
+  
+
+  
+  
+  
 })
 
 
