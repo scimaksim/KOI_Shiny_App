@@ -8,141 +8,146 @@
 # Define server logic required to draw the plots
 server <- shinyServer(function(input, output) {
   
-  #Create prior plot output
-  output$priorPlot<-renderPlot({
-    
-    #Plotting sequence
-    x <- seq(from=0,to=1,by=0.01)
-    
-    #get alpha and beta values from input
-    alphaval<-input$alpha
-    betaval<-input$beta
-    
-    #set defaults if not supplied
-    if (is.na(alphaval)){alphaval<-1}
-    if (is.na(betaval)){betaval<-1}
-    
-    #draw the prior distribution plot
-    plot(x=x,y=dbeta(x=x,shape1=alphaval,shape2=betaval),main="Prior Density for Theta",xlab="theta's", ylab="f(theta)",type="l")
-    
-  })
-  
-  # Data subsetting
+  # Get column names for filtering data
   getData <- reactive({
-    
-    columns = names(filteredKOI)
-    
+
     # Stores names of user-selected columns for subsetting in output$tableKOI
     if (!is.null(input$select)) {
-      columns = input$select
+      columnNames <- input$select
+    } else {
+      columnNames <- names(defaultValKOI)
     }
-    filteredKOI[,columns,drop=FALSE]
+    #defaultValKOI[ , columnNames, drop=FALSE]
+    columnNames
   })
   
-  # Create table of observations    
-  output$tableKOI <- DT::renderDT(server = FALSE, {
+  # Render a datatable of KOIs, consider column input from getData() above    
+  output$tableKOI <- DT::renderDT(#server = FALSE, 
+                                  {
     # Include horizontal and vertical scrolling, render only visible portion of data,
     # include buttons for downloading in CSV and XLSX,
     # render DT in the client to allow all data or filtered to be downloaded.
-    dtable <- datatable(getData(), extensions = c('Buttons', 'Scroller', 'Select', 'SearchBuilder'), selection = 'none',
-                        options = list(scrollX = TRUE, 
+    datatable(defaultValKOI[, getData(), drop=FALSE], filter = 'top', extensions = c('Scroller'), 
+                        options = list(
+                                       scrollX = TRUE, 
                                        deferRender = TRUE,
                                        scrollY = 400,
                                        scroller = TRUE,
-                                       dom = 'QlBfrtip',
-                                       buttons = list(list(extend = "collection",
-                                                                   buttons = c("csv", "excel"), text = "Download")),
-                                       searchBuilder = list(
-                                         columns = 1:ncol(getData()) # Include all columns in custom search builder
-                                         
-                                       )))
+                                       dom = 'Qlfrtip')
+              )
     # Subset the data set using SearchBuilder implementation with CSS and JS files
     # https://www.datatables.net/extensions/searchbuilder/
     # https://stackoverflow.com/questions/64773579/how-to-implement-datatables-option-in-shiny-r-syntax
-    dep <- htmlDependency(
-      name = "searchBuilder",
-      version = "1.0.0", 
-      src = path_to_searchBuilder,
-      script = "dataTables.searchBuilder.min.js",
-      stylesheet = "searchBuilder.dataTables.min.css",
-      all_files = FALSE
-    )
+    # dep <- htmlDependency(
+    #   name = "searchBuilder",
+    #   version =https://stackoverflow.com/questions/41597062/r-download-filtered-datatable "1.0.0", 
+    #   src = path_to_searchBuilder,
+    #   script = "dataTables.searchBuilder.min.js",
+    #   stylesheet = "searchBuilder.dataTables.min.css",
+    #   all_files = FALSE
+    # )
     
-    dtable$dependencies <- c(dtable$dependencies, list(dep))
-    dtable
-    
+    #dtable$dependencies <- c(dtable$dependencies, list(dep))
+
   })
   
-  getDropdownChoice <- reactive({
-    selectedVar <- input$summaryVariable
-  })
+  # Download filtered data set
+  # Based on response from https://stackoverflow.com/questions/53499066/downloadhandler-with-filtered-data-in-shiny
+  output$downloadFiltered <- downloadHandler(
+    
+    filename = function() {
+      # File name
+      paste('Filtered_KOI-', Sys.Date(), '.csv', sep = '')  
+    },
+    content = function(file) {
+      # Filtered table
+      write.csv(defaultValKOI[input[["tableKOI_rows_all"]], getData()],
+                file= file,
+                row.names=F)
+    }
+  )
   
-  # Create orbital period/radius scatter plot 
-  output$finalPlot <- renderPlot({
+  
+  #-------------------- Create scatter plot and histogram--------------
+  #--------------------------------------------------------------------
+  
+  # Create scatter plot
+  output$scatterPlot <- renderPlot({
+    scatterPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars(), y = scatterYVars())) +
+      geom_point(aes_string(color = scatterColorVar()), 
+                 alpha = 0.6, position = "jitter")
     
-    
-    if(input$plotTabs == "Scatter"){
-      
-      # Use LaTeX to denote the standard astronomical symbol for the Earth
-      periodRadScatter <- ggplot(defaultValKOI, aes(x = koi_period, y = koi_prad)) +
-        geom_point(aes(color = koi_disposition), 
-                   alpha = 0.6, position = "jitter") +
-        labs(x = "Orbital period (days)", y = TeX(r'(Planet mass $(M_{E})$)'),
-             title = "Orbital period versus planetary radius", col = "Disposition") +
-        scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3)) +
-        scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                      labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4)) 
-      
-      # Label excessively large KOIs, eliminate overlapping labels
-      # using geom_text_repel from the ggrepel package.
-      # Examples provided at https://ggrepel.slowkow.com/articles/examples.html 
-      if(input$radialOutliers){
-        # Label only "CANDIDATE" objects exceeding 500 Earth radii
-        if(input$candidatesOnly){
-          periodRadScatter + geom_text_repel(aes(label = ifelse(koi_prad >= 500 & koi_disposition == "CANDIDATE", kepoi_name,'')), point.padding = 0.2,    
-                                             nudge_x = .15,
-                                             nudge_y = .5,
-                                             arrow = arrow(length = unit(0.02, "npc")),
-                                             segment.curvature = -1e-20,
-                                             segment.linetype = 6)
-          
-        } else {
-          # Label all objects exceeding R = 2000
-          periodRadScatter + geom_text_repel(aes(label = ifelse(koi_prad >= 2000, kepoi_name,'')), point.padding = 0.2,    
-                                             nudge_x = .15,
-                                             nudge_y = .5,
-                                             arrow = arrow(length = unit(0.02, "npc")),
-                                             segment.curvature = -1e-20,
-                                             segment.linetype = 6)
-        }
-      } else {
-        periodRadScatter
-      }
-      
-    } else if(input$plotTabs == "Histogram"){
-      
-      # Get user var selection for histogram
-      selectedVar <- getDropdownChoice()
-      
-      # Plot histogram
-      histo <- ggplot(dataKOI, aes_string(x = selectedVar)) +
-        geom_histogram(aes(y = ..density..), color = "#e9ecef", fill = "#69b3a2", bins = input$binNumber) +
-        labs(x = selectedVar) +
-        geom_density(adjust = 0.5, alpha = 0.5)
-      
-      # If checkbox is selected, use a log10 scle for x-axis
-      if(input$logAxis){
-        histo + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                              labels = scales::trans_format("log10", scales::math_format(10^.x)))
-      } else {
-        histo
-      }
-      
-      
+    # If "Log X" is selected  
+    if (1 %in% scatterLogCheck()) {
+      scatterPlot <- scatterPlot + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                             labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
     }
     
+    # If "Log Y" is selected
+    if (2 %in% scatterLogCheck()) {
+      scatterPlot <- scatterPlot + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                             labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
+    }
+    
+    scatterPlot
+    
   })
+  
+  # Find information about selected point in the scatter plot
+  output$scatterClickInfo <- renderPrint({
+    # Because it's a ggplot2, we don't need to supply xvar or yvar; if this
+    # were a base graphics plot, we'd need those.
+    nearPoints(defaultValKOI, input$scatterPlot_click)
+  })
+  
+  
+  # Identify which variable is selected for density plot
+  densityVarChoice <- reactive({
+    selectedVar <- input$summaryVariable
+    selectedVar
+  })
+  
+  # Distribution plot  
+  output$distributionPlot <- renderPlot({
+      
+      # Get user var selection for histogram
+      selectedVar <- densityVarChoice()
+      
+      # Plot histogram
+      histo <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
+        geom_histogram(bins = distributionBins())
+      
+      # If checkbox is selected, use a log10 scale for x-axis
+      if(1 %in% input$distributionLogCheck){
+        histo <- histo + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                              labels = scales::trans_format("log10", scales::math_format(10^.x)))
+        
+        histo
+        
+      } else {
+        
+        histo
+      }
+
+    })
+  
+  # Density plot  
+  output$densityPlot <- renderPlot({
+      densityPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
+        geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5)  
+      
+      if(1 %in% input$densityLogCheck){
+        densityPlot <- densityPlot + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                                                   labels = scales::trans_format("log10", scales::math_format(10^.x)))
+        densityPlot
+      } else {
+        
+      densityPlot
+}
+    
+  })
+  
+
   
   getCorrChoice <- reactive({
     corrDropdownChoice <- input$corrType
@@ -231,55 +236,9 @@ server <- shinyServer(function(input, output) {
     densSmooth
   })
   
-  # Create summary plots
-  output$summaryPlot <- renderPlot({
-    
-    if (input$selectPlotInput == "Distribution") {
-      
-      g <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
-        geom_histogram(bins = distributionBins())
-      g
-    } else if (input$selectPlotInput == "Density") {
-      
-      g <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
-        geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5)  
-      g
-    } else if (input$selectPlotInput == "Scatter") {
-      
-      g <- ggplot(defaultValKOI, aes_string(x = distributionVars(), y = scatterYVars())) +
-        geom_point(aes_string(color = scatterColorVar()), 
-                   alpha = 0.6, position = "jitter")
-      
-      # If "Log X" is selected  
-      if (1 %in% scatterLogCheck()) {
-        g <- g + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                               labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
-      }
-      
-      # If "Log Y" is selected
-      if (2 %in% scatterLogCheck()) {
-        g <- g + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                               labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
-      }
-      
-    }
-    
-    g
-    
-    
-    
-  })
-  
-  
-  
-  
-  #-------------------------------------------------------------------------------------------------------------------------------------------  
-  #-------------------------------------------------------------------------------------------------------------------------------------------  
-  #-------------------------------------------------------------------------------------------------------------------------------------------  
-  #-------------------------------------------------------------------------------------------------------------------------------------------  
-  
-  
-  
+
+
+
   
   
   
@@ -451,9 +410,6 @@ server <- shinyServer(function(input, output) {
                           tuneLength = classTuneLengthReactive(),
                           trControl = trainControl(method = "cv", number = kFolds()))
         rpartFit
-        
-        
-        
       })
       
     }
@@ -474,8 +430,6 @@ server <- shinyServer(function(input, output) {
     output$rpartPlot <- renderPlot({
       plot(rpartTrain())
     })
-    
-    
     
     # The models should be compared on the test set and appropriate fit statistics reported.
     output$rpartTestPredict <- renderPrint({
