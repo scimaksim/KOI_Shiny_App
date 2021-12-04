@@ -9,7 +9,7 @@ To install the requisite packages for this application, run
 ```
 install.packages(c("shiny", "shinydashboard", "dashboardthemes",
 "DT", "htmltools", "latex2exp", "tidyverse", "ggrepel", "grid",
-"caret", "lares", "data.table", "rpart.plot", "randomForest", "glmnet", "ggcorrplot))
+"caret", "lares", "data.table", "rpart.plot", "randomForest", "glmnet", "Cairo", "ggplot2", "ggcorrplot))
 ```
 
 ## Launch instructions
@@ -19,3 +19,5 @@ To launch this application in R, run
 ```
 shiny::runGitHub("NASA_KOI", "scimaksim", ref = "main")
 ```
+
+Alternatively, this application can be accessed at https://scimaksim.shinyapps.io/nasa_koi/.

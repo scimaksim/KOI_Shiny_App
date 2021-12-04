@@ -73,9 +73,15 @@ server <- shinyServer(function(input, output) {
   
   # Create scatter plot
   output$scatterPlot <- renderPlot({
-    scatterPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars(), y = scatterYVars())) +
-      geom_point(aes_string(color = scatterColorVar()), 
-                 alpha = 0.6, position = "jitter")
+    scatterPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars(), y = scatterYVars()))
+    
+    if (input$colorScatter) {
+      scatterPlot <- scatterPlot + geom_point(aes_string(color = scatterColorVar()), 
+                 alpha = 0.6, position = "jitter") + theme_classic()
+    } else {
+      scatterPlot <- scatterPlot + geom_point(alpha = 0.6, position = "jitter") + theme_classic()
+    }
+    
     
     # If "Log X" is selected  
     if (1 %in% scatterLogCheck()) {
@@ -89,6 +95,7 @@ server <- shinyServer(function(input, output) {
                              labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
     }
     
+    # Output final scatter plot
     scatterPlot
     
   })
@@ -108,14 +115,15 @@ server <- shinyServer(function(input, output) {
   })
   
   # Distribution plot  
-  output$distributionPlot <- renderPlot({
+  output$histogramPlot <- renderPlot({
       
       # Get user var selection for histogram
       selectedVar <- densityVarChoice()
       
       # Plot histogram
       histo <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
-        geom_histogram(bins = distributionBins())
+        geom_histogram(bins = distributionBins(), fill = '#108A99', color = 'white') +
+        theme_classic()
       
       # If checkbox is selected, use a log10 scale for x-axis
       if(1 %in% input$distributionLogCheck){
@@ -126,6 +134,7 @@ server <- shinyServer(function(input, output) {
         
       } else {
         
+        # Output final histogram
         histo
       }
 
@@ -134,7 +143,8 @@ server <- shinyServer(function(input, output) {
   # Density plot  
   output$densityPlot <- renderPlot({
       densityPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
-        geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5)  
+        geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5) +
+        theme_classic()
       
       if(1 %in% input$densityLogCheck){
         densityPlot <- densityPlot + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),

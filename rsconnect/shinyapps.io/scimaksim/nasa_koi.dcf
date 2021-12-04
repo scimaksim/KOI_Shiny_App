@@ -5,7 +5,7 @@ account: scimaksim
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5264589
-bundleId: 5325960
+bundleId: 5328343
 url: https://scimaksim.shinyapps.io/nasa_koi/
-when: 1638591203.01344
-lastSyncTime: 1638591203.01345
+when: 1638659478.78524
+lastSyncTime: 1638659478.78525

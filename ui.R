@@ -20,7 +20,7 @@ library(randomForest)
 library(glmnet)
 library(ggplot2)
 library(Cairo)
-library(ggstatsplot)
+library(ggcorrplot)
 
 
 # Custom Shiny input binding for selecting model predictors, sourced from
@@ -169,7 +169,10 @@ ui <- dashboardPage(#skin="blue",
                                                    selectInput("distributionYInput", "y variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_prad"),
                                                    checkboxGroupInput("scatterCheckGroup", label = "Plot options", 
                                                                       choices = list("Log X" = 1, "Log Y" = 2), selected = c(1, 2)),
-                                                   selectInput("scatterColorVar", "Color", colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_disposition")
+                                                   checkboxInput("colorScatter", label = "Color by...", value = TRUE),
+                                                   conditionalPanel(condition = "input.colorScatter == 1",
+                                                                    selectInput("scatterColorVar", "Color", colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_disposition")
+                                                   )
                                   ),
                                   conditionalPanel(condition = "input.selectPlotInput == 'Correlation'",
                                                    radioButtons("corrTypeRadio", label = "Correlation plot",
@@ -184,7 +187,7 @@ ui <- dashboardPage(#skin="blue",
                                                    ),
                                                    conditionalPanel(condition = "input.corrTypeRadio == 3",
                                                                     chooserInput("ggCorrVars", "Available frobs", "Selected frobs",
-                                                                                 colnames(defaultValKOI), size = 8, multiple = TRUE, rightChoices = c("koi_disposition", "koi_period", "koi_duration", "koi_prad", "koi_teq", "koi_score", "koi_srad"))
+                                                                                 colnames(defaultValKOI), size = 9, multiple = TRUE, rightChoices = c("koi_disposition", "koi_period", "koi_duration", "koi_prad", "koi_teq", "koi_score", "koi_srad"))
                                                    )
                                                    
                                   )
@@ -202,7 +205,7 @@ ui <- dashboardPage(#skin="blue",
                                                    br()
                                   ),
                                   conditionalPanel(condition = "input.selectPlotInput == 'Histogram'",
-                                                   plotOutput("distributionPlot"),
+                                                   plotOutput("histogramPlot"),
                                                    br()
                                   ),
                                   conditionalPanel(condition = "input.selectPlotInput == 'Correlation'",
@@ -218,7 +221,7 @@ ui <- dashboardPage(#skin="blue",
               # Settings
               fluidRow(column(width = 3,
                               h3(strong("Numerical summaries"))
-                              )
+              )
               ),
               fluidRow(column(width = 3,
                               box(width = 12,
@@ -235,11 +238,11 @@ ui <- dashboardPage(#skin="blue",
               ),
               column(width = 9,
                      box(width = 12, DTOutput("summaryTable"))
-                     )
+              )
               )
               
               
-              ),
+      ),
       #------------------------------------------------------------------------------------------------------------                        
       #-----------------------------------Data modeling------------------------------------------------------------ 
       #------------------------------------------------------------------------------------------------------------                          
