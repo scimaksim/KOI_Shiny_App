@@ -20,6 +20,8 @@ library(randomForest)
 library(glmnet)
 library(ggplot2)
 library(Cairo)
+library(ggstatsplot)
+
 
 # Custom Shiny input binding for selecting model predictors, sourced from
 # https://github.com/rstudio/shiny-examples/tree/main/036-custom-input-control
@@ -120,9 +122,9 @@ ui <- dashboardPage(#skin="blue",
               br(),
               # Subset columns in data set
               selectInput("select", "Select columns to display", names(defaultValKOI), multiple = TRUE),
-              downloadButton("downloadFiltered", "Download CSV"),
               # Output table of data
-              DTOutput("tableKOI")
+              DTOutput("tableKOI"),
+              downloadButton("downloadFiltered", "Download CSV")
       ),
       
       #------------------------------------------------------------------------------------------------------------                        
@@ -131,32 +133,6 @@ ui <- dashboardPage(#skin="blue",
       # Create numerical and graphical summaries, change the type of plot and type of summary reported,
       # change the variables and filter the rows to change the data in the plots/summaries
       tabItem(tabName = "exploration",
-              
-              
-              
-              # Numerical summaries
-              # Settings
-              fluidRow(column(width = 3,
-                              h3(strong("Numerical summaries"))
-                              )
-                       ),
-              fluidRow(column(width = 3,
-                              box(width = 12,
-                                  verbatimTextOutput('out3'),
-                                  # Subset data set to include only numeric variables
-                                  h4("Select variables to summarize"),
-                                  chooserInput("dataVarChooser", "Available frobs", "Selected frobs",
-                                               colnames(filteredKOI), size = 15, multiple = TRUE, rightChoices = c("koi_period", "koi_duration", "koi_depth", "koi_prad", "koi_teq", "koi_steff", "koi_srad", "koi_kepmag")
-                                  ),
-                                  br(),
-                                  selectInput("applyFuncInput", "Apply function(s)", c("mean", "median", "min", "max", "sd", "var", "sum"), multiple=TRUE, selectize=TRUE, selected = c("mean", "min", "max", "sd")),
-                                  numericInput("roundDigitsInput", label = "Decimals", value = 1, max = 6)
-                              )
-              ),
-              column(width = 9,
-                     box(width = 12, DTOutput("summaryTable"))
-              )
-              ),
               
               # Graphical summaries
               # Settings
@@ -167,7 +143,7 @@ ui <- dashboardPage(#skin="blue",
               fluidRow(column(width = 3,
                               box(width = 12,
                                   selectInput("selectPlotInput", label = "Plot type", 
-                                              choices = c("Histogram", "Density", "Scatter"), 
+                                              choices = c("Histogram", "Density", "Scatter", "Correlation"), 
                                               selected = "Distribution"),
                                   # Keep same variable list for distribution and density plots, but alternate between number of bins/smooth options
                                   conditionalPanel(condition = "input.selectPlotInput == 'Histogram' || input.selectPlotInput == 'Density'",
@@ -194,6 +170,23 @@ ui <- dashboardPage(#skin="blue",
                                                    checkboxGroupInput("scatterCheckGroup", label = "Plot options", 
                                                                       choices = list("Log X" = 1, "Log Y" = 2), selected = c(1, 2)),
                                                    selectInput("scatterColorVar", "Color", colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_disposition")
+                                  ),
+                                  conditionalPanel(condition = "input.selectPlotInput == 'Correlation'",
+                                                   radioButtons("corrTypeRadio", label = "Correlation plot",
+                                                                choices = list("Single variable" = 1, "Ranked cross-correlations" = 2, "Corrolelogram" = 3), 
+                                                                selected = 3),
+                                                   numericInput("pValMax", label = "Significance level", value = 0.05, max = 0.1, step = 0.01),
+                                                   conditionalPanel(condition = "input.corrTypeRadio == 1",
+                                                                    selectInput('corrSingleVar', 'Variable', colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_prad")
+                                                   ),
+                                                   conditionalPanel(condition = "input.corrTypeRadio == 2",
+                                                                    numericInput("corrVarCouples", label = "# of variable couples", value = 10, min = 2, max = 15)
+                                                   ),
+                                                   conditionalPanel(condition = "input.corrTypeRadio == 3",
+                                                                    chooserInput("ggCorrVars", "Available frobs", "Selected frobs",
+                                                                                 colnames(defaultValKOI), size = 8, multiple = TRUE, rightChoices = c("koi_disposition", "koi_period", "koi_duration", "koi_prad", "koi_teq", "koi_score", "koi_srad"))
+                                                   )
+                                                   
                                   )
                               )),
                        # Plot graphics
@@ -211,10 +204,42 @@ ui <- dashboardPage(#skin="blue",
                                   conditionalPanel(condition = "input.selectPlotInput == 'Histogram'",
                                                    plotOutput("distributionPlot"),
                                                    br()
+                                  ),
+                                  conditionalPanel(condition = "input.selectPlotInput == 'Correlation'",
+                                                   plotOutput("corrCrossPlot"),
+                                                   br()
                                   )
                               )
                        )
-              )),
+              ),
+              
+              
+              # Numerical summaries
+              # Settings
+              fluidRow(column(width = 3,
+                              h3(strong("Numerical summaries"))
+                              )
+              ),
+              fluidRow(column(width = 3,
+                              box(width = 12,
+                                  verbatimTextOutput('out3'),
+                                  # Subset data set to include only numeric variables
+                                  h4("Select variables to summarize"),
+                                  chooserInput("dataVarChooser", "Available frobs", "Selected frobs",
+                                               colnames(filteredKOI), size = 15, multiple = TRUE, rightChoices = c("koi_period", "koi_duration", "koi_depth", "koi_prad", "koi_teq", "koi_steff", "koi_srad", "koi_kepmag")
+                                  ),
+                                  br(),
+                                  selectInput("applyFuncInput", "Apply function(s)", c("mean", "median", "min", "max", "sd", "var", "sum"), multiple=TRUE, selectize=TRUE, selected = c("mean", "min", "max", "sd")),
+                                  numericInput("roundDigitsInput", label = "Decimals", value = 1, max = 6)
+                              )
+              ),
+              column(width = 9,
+                     box(width = 12, DTOutput("summaryTable"))
+                     )
+              )
+              
+              
+              ),
       #------------------------------------------------------------------------------------------------------------                        
       #-----------------------------------Data modeling------------------------------------------------------------ 
       #------------------------------------------------------------------------------------------------------------                          

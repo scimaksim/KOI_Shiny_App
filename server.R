@@ -147,28 +147,57 @@ server <- shinyServer(function(input, output) {
     
   })
   
-
+  #-------------------Correlation plots-------------------------
+  #-------------------------------------------------------------
   
-  getCorrChoice <- reactive({
-    corrDropdownChoice <- input$corrType
-    
+  # Number of variable couples (by correlation coefficient)
+  corrVarTop <- reactive ({
+    corrVarCouples <- input$corrVarCouples
+    corrVarCouples
   })
   
-  output$corrPlot <- renderPlot({
-    if(getCorrChoice() == "Ranked cross-correlations") {
+  # Determine which correlations are significant
+  pValReactive <- reactive ({
+    pValue <- input$pValMax
+    pValue
+  })
+  
+  # Determine which variable is selected for single-var correlation
+  selectedCorrVar <- reactive({
+    selectedVar <- input$corrSingleVar
+    as.name(selectedVar)
+  })
+
+  # Correlation plot
+  output$corrCrossPlot <- renderPlot({
+    
+    if(input$corrTypeRadio == 2) {
       
       corr_cross(defaultValKOI, # name of dataset
-                 max_pvalue = 0.05, # display only significant correlations (at 5% level)
-                 top = 10 # display top 10 couples of variables (by correlation coefficient)
+                 max_pvalue = pValReactive(),
+                 top = corrVarTop() 
       )
-    } else {
       
-      corr_var(defaultValKOI, # name of dataset
-               koi_disposition_binary,
-               top = 10 # display top 10 couples of variables (by correlation coefficient)
+    } else if(input$corrTypeRadio == 1){
+      
+      corr_var(defaultValKOI,
+               var = (!! sym(input$corrSingleVar)),
+               max_pvalue = pValReactive(),
+               top = corrVarTop() # display top 10 couples of variables (by correlation coefficient)
+      )
+      
+    } else if(input$corrTypeRadio == 3) {
+      # correlogram
+      ggstatsplot::ggcorrmat(
+        data = defaultValKOI,
+        cor.vars = input$ggCorrVars$right,
+        type = "parametric", # parametric for Pearson, nonparametric for Spearman's correlation
+        colors = c("darkred", "white", "steelblue") # change default colors
       )
       
     }
+    
+    
   })
   
   # Columns for numeric summaries
