@@ -380,16 +380,30 @@ server <- shinyServer(function(input, output) {
     
     
     output$glmCandidatePredict <- renderDT({
-      predictCandidateGLM <- predict(glmTrain(), filteredCandidateKOI, type = "raw")
-      df <- data.frame(predictCandidateGLM, filteredCandidateKOI)
+      df <- filteredCandidateKOI[, input$glmPredictors$right]
+      predictCandidateGLM <- predict(glmTrain(), df, type = "prob")
+      df <- data.frame(predictCandidateGLM, filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, df)
+      df <- rename(df, c("FALSE_POS_prob" = "X0", "CANDIDATE_prob" = "X1"))
+      datatable(df)
+    })
+
+    output$classCandidatePredict <- renderDT({
+      df <- filteredCandidateKOI[, input$glmPredictors$right]
+      predictCandidateGLM <- predict(rpartTrain(), df, type = "prob")
+      df <- data.frame(predictCandidateGLM, filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, df)
+      df <- rename(df, c("FALSE_POS_prob" = "X0", "CANDIDATE_prob" = "X1"))
       datatable(df)
     })
     
-    
-    output$confirmedTable <- renderDT({
-      filteredCandidateKOI$confirmed <- as.integer(glmCandidatePredict())
-      datatable(filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, filteredCandidateKOI$confirmed)
+    output$rfCandidatePredict <- renderDT({
+      df <- filteredCandidateKOI[, input$glmPredictors$right]
+      predictCandidateGLM <- predict(rfTrain(), df, type = "prob")
+      df <- data.frame(predictCandidateGLM, filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, df)
+      df <- rename(df, c("FALSE_POS_prob" = "X0", "CANDIDATE_prob" = "X1"))
+      datatable(df)
     })
+    
+
     
     
     
@@ -548,9 +562,7 @@ server <- shinyServer(function(input, output) {
     
     
     #------------Prediction tab------------------------
-    
-    
-    
+
     # References:
     # https://stackoverflow.com/questions/39135877/in-rshiny-ui-how-to-dynamic-show-several-numericinput-based-on-what-you-choose
     # https://stackoverflow.com/questions/50795355/how-to-extract-the-values-of-dynamically-generated-inputs-in-shiny

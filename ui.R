@@ -383,17 +383,18 @@ ui <- dashboardPage(skin="blue",
                                                               
                                                        ),
                                                        column(width = 10,
-                                                              tabsetPanel(id = "predictionTabSet",
-                                                                          tabPanel("Raw predictions",
-                                                                                   box(width = 12,
-                                                                                       DTOutput("glmCandidatePredict")
-                                                                                   )
-                                                                          ),
-                                                                          tabPanel("Data table", DTOutput("confirmedTable"))
-                                                              )
+                                                              h4(strong("CANDIDATE KOI observations")),
+                                                              h4("Predicted probabilities"),
+                                                              conditionalPanel(condition = "input.predictionModel == 1",
+                                                                               DTOutput("glmCandidatePredict")),
+                                                              conditionalPanel(condition = "input.predictionModel == 2",
+                                                                               DTOutput("classCandidatePredict")),
+                                                              conditionalPanel(condition = "input.predictionModel == 3",
+                                                                               DTOutput("rfCandidatePredict"))
+                                                              ),
                                                        ))
                                                      
-                                            ))), 
+                                            )), 
                         
                         # References
                         tabItem(tabName = "references",
