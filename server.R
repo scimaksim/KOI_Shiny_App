@@ -3,8 +3,7 @@
 # Server logic
 #
 #---------------------------------------------------------------------------------------------------------------------------------------
-library(shiny)
-library(shinydashboard)
+
 
 # Define server logic required to draw the plots
 server <- shinyServer(function(input, output) {
@@ -31,13 +30,13 @@ server <- shinyServer(function(input, output) {
   # Data subsetting
   getData <- reactive({
     
-    columns = names(dataKOI)
+    columns = names(filteredKOI)
     
     # Stores names of user-selected columns for subsetting in output$tableKOI
     if (!is.null(input$select)) {
       columns = input$select
     }
-    dataKOI[,columns,drop=FALSE]
+    filteredKOI[,columns,drop=FALSE]
   })
   
   # Create table of observations    
@@ -51,10 +50,10 @@ server <- shinyServer(function(input, output) {
                                        scrollY = 400,
                                        scroller = TRUE,
                                        dom = 'QlBfrtip',
-                                       buttons = list('copy', list(extend = "collection",
+                                       buttons = list(list(extend = "collection",
                                                                    buttons = c("csv", "excel"), text = "Download")),
                                        searchBuilder = list(
-                                         columns = 1:ncol(getData()) # Include all columns in custom seatch builder
+                                         columns = 1:ncol(getData()) # Include all columns in custom search builder
                                          
                                        )))
     # Subset the data set using SearchBuilder implementation with CSS and JS files
@@ -359,7 +358,7 @@ server <- shinyServer(function(input, output) {
                       trControl = trainControl(method = "cv", number = kFolds()))
       glmFit
     })
-
+    
     # Output generalized linear regression summary
     output$glmSummary <- renderPrint({
       summary(glmTrain())
@@ -378,7 +377,10 @@ server <- shinyServer(function(input, output) {
       glmRMSE
     })
     
+    #------ Render data tables with predicted probabilities for 'CANDIDATE' objects-----------
+    #-----------------------------------------------------------------------------------------
     
+    # GLM
     output$glmCandidatePredict <- renderDT({
       df <- filteredCandidateKOI[, input$glmPredictors$right]
       predictCandidateGLM <- predict(glmTrain(), df, type = "prob")
@@ -386,24 +388,26 @@ server <- shinyServer(function(input, output) {
       df <- rename(df, c("FALSE_POS_prob" = "X0", "CANDIDATE_prob" = "X1"))
       datatable(df)
     })
-
+    
+    # Classification tree
     output$classCandidatePredict <- renderDT({
-      df <- filteredCandidateKOI[, input$glmPredictors$right]
+      df <- filteredCandidateKOI[, input$rfPredictors$right]
       predictCandidateGLM <- predict(rpartTrain(), df, type = "prob")
       df <- data.frame(predictCandidateGLM, filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, df)
       df <- rename(df, c("FALSE_POS_prob" = "X0", "CANDIDATE_prob" = "X1"))
       datatable(df)
     })
     
+    # Random forest
     output$rfCandidatePredict <- renderDT({
-      df <- filteredCandidateKOI[, input$glmPredictors$right]
+      df <- filteredCandidateKOI[, input$rfPredictors$right]
       predictCandidateGLM <- predict(rfTrain(), df, type = "prob")
       df <- data.frame(predictCandidateGLM, filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, df)
       df <- rename(df, c("FALSE_POS_prob" = "X0", "CANDIDATE_prob" = "X1"))
       datatable(df)
     })
     
-
+    
     
     
     
@@ -562,7 +566,7 @@ server <- shinyServer(function(input, output) {
     
     
     #------------Prediction tab------------------------
-
+    
     # References:
     # https://stackoverflow.com/questions/39135877/in-rshiny-ui-how-to-dynamic-show-several-numericinput-based-on-what-you-choose
     # https://stackoverflow.com/questions/50795355/how-to-extract-the-values-of-dynamically-generated-inputs-in-shiny
@@ -634,7 +638,7 @@ server <- shinyServer(function(input, output) {
         
         # Rename columns using predictor names
         valNum <- valNum %>% rename_at(vars(names(valNum)), ~input$glmPredictors$right)
-
+        
         # Predict whether KOI should be marked as "CONFIRMED" (1) or "FALSE POSITIVE" (0)
         # and output result
         predictGLM <- predict(glmTrain(), valNum, type = "prob")
@@ -674,12 +678,12 @@ server <- shinyServer(function(input, output) {
         predictRF <- predict(rfTrain(), valDF, type = "prob")
         predictRF
       })
-    
+      
     })
-
+    
   })
   
-
+  
   
   
   

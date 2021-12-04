@@ -1,5 +1,6 @@
 library(shiny)
 library(shinydashboard)
+library(dashboardthemes)
 library(DT)
 library(htmltools)
 library(latex2exp)
@@ -9,7 +10,7 @@ library(grid)
 library(caret)
 library(lares)
 library(data.table)
-library(rpart.plot)
+#library(rpart.plot)
 
 # install.packages("shiny", "shinydashboard", "DT", "htmltools", "latex2exp", "tidyverse", 
 # "ggrepel", "grid", "caret", "lares", "data.table", "rpart.plot", "glmnet", "rpart", "randomForest")
@@ -18,7 +19,7 @@ library(rpart.plot)
 # https://github.com/rstudio/shiny-examples/tree/main/036-custom-input-control
 source("chooser.R")
 
-ui <- dashboardPage(skin="blue",
+ui <- dashboardPage(#skin="blue",
                     
                     #add title
                     dashboardHeader(title=strong("NASA - Kepler Objects of Interest"),titleWidth=1000),
@@ -34,6 +35,11 @@ ui <- dashboardPage(skin="blue",
                     
                     #define the body of the app
                     dashboardBody(
+                      
+                      shinyDashboardThemes(
+                        theme = "poor_mans_flatly"
+                      ),
+                      
                       tabItems(
                         #------------------------------------------------------------------------------------------------------------                        
                         #-------------------------------------------About------------------------------------------------------------ 
@@ -49,7 +55,8 @@ ui <- dashboardPage(skin="blue",
                                          #Description of App
                                          h1("What does this app do?"),
                                          #box to contain description
-                                         box(background="blue",width=12,
+                                         box(#background="blue",
+                                             width=12,
                                              h4("This application explores the ", span("cumulative", style = "font-style:italic"), "database of Kepler Objects of Interest (KOI) in the NASA Exoplanet Archive. 'The intent of the cumulative table is to provide the most accurate dispositions and stellar and planetary information for all KOIs in one place.'"),
                                              h4("Kepler's was the 'first space mission to search for Earth-sized and smaller planets in the habitable zone of other stars in our neighborhood of the galaxy'. KOIs are 'well vetted, periodic, transit-like events in the Kepler data'."),
                                              h4("'The cumulative table is created algorithmically, following simple rules. The information for each KOI is pulled from the preferred activity table based on two priority lists. One priority list (Disposition Priority) indicates the activity table from which the disposition (e.g., CANDIDATE or FALSE POSITIVE) has been pulled. If the object is not dispositioned in the highest priority activity table for a specific KOI, then it is pulled from the next highest priority activity table, and so on. In this way the cumulative table contains the most current disposition for each KOI. The second priority list (Transit-Fit Priority) indicates where the remaining information for each KOI (e.g., the transit fits, stellar properties and vetting statistics) was obtained. The activity table with reliable transit fits to the longest data set is given priority for the cumulative table. This will not necessarily provide the best fit for every individual KOI, but gives the most reliable fits overall. The current Disposition Priority order is: Q1-Q17 DR 25 Supplemental, Q1-Q17 DR 25, Q1-Q17 DR 24, Q1-Q16, Q1-Q12, Q1-Q8, Q1-Q6. The current Transit-Fit Priority order is: Q1-Q17 DR 25, Q1-17 DR 24, Q1-Q16, Q1-Q12, Q1-Q8, Q1-Q6, and Q1-Q17 DR 25 Supplemental.
@@ -64,7 +71,8 @@ ui <- dashboardPage(skin="blue",
                                          #How to use the app
                                          h1("How to use the app?"),
                                          #box to contain description
-                                         box(background="blue",width=12,
+                                         box(#background="blue",
+                                             width=12,
                                              h4("The controls for this application are located on the left."),
                                              h4("The ", strong("Data"), " page allows users to scroll through the data set, subset the data, and save the (possibly subsetted) data as a CSV file."),
                                              h4("The ", strong("Data Exploration"), " page allows users to create numerical and graphical summaries, change the type of plot and type of summary reported, and change the variables and filter the rows to change the data in the plots/summaries."),
@@ -86,7 +94,7 @@ ui <- dashboardPage(skin="blue",
                                          infoBox(nrow(filter(dataKOI, koi_disposition == "CANDIDATE")), "Candidate(s)", icon = icon("question"), color = "yellow", width = 3),
                                          infoBox(nrow(filter(dataKOI, koi_disposition == "FALSE POSITIVE")), "False Positive", icon = icon("times-circle"), color = "red", width = 3)
                                 ),
-                                selectInput("select", "Select columns to display", names(dataKOI), multiple = TRUE),
+                                selectInput("select", "Select columns to display", names(filteredKOI), multiple = TRUE),
                                 DTOutput("tableKOI")
                         ),
                         
