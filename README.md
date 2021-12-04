@@ -1,6 +1,6 @@
-# NASA - Kepler Objects of Interest (KOI)
+# Exploring Kepler Objects of Interest (KOI)
 
-This application explores the [cumulative](https://exoplanetarchive.ipac.caltech.edu/docs/API_kepcandidate_columns.html) database of Kepler Objects of Interest (KOI) in the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/index.html).
+This application provides summaries and statistical models for observations in the [cumulative](https://exoplanetarchive.ipac.caltech.edu/docs/API_kepcandidate_columns.html) table of Kepler Objects of Interest (KOI) in [NASA's Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/index.html).
 
 ## Package requirements
 
@@ -17,5 +17,5 @@ install.packages(c("shiny", "shinydashboard", "dashboardthemes",
 To launch this application in R, run 
 
 ```
-shiny::runGitHub("NASA_KOI", "scimaksim", ref = "main")`
+shiny::runGitHub("NASA_KOI", "scimaksim", ref = "main")
 ```
