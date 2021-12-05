@@ -180,13 +180,14 @@ server <- shinyServer(function(input, output) {
   # Correlation plot
   output$corrCrossPlot <- renderPlot({
     
+    # Ranked cross-correlations
     if(input$corrTypeRadio == 2) {
-      
-      corr_cross(defaultValKOI, # name of dataset
+      # Data set name, re-use p-value and number of correlation values
+      corr_cross(defaultValKOI, 
                  max_pvalue = pValReactive(),
                  top = corrVarTop() 
       )
-      
+      # Single variable correlation
     } else if(input$corrTypeRadio == 1){
       
       corr_var(defaultValKOI,
@@ -194,7 +195,7 @@ server <- shinyServer(function(input, output) {
                max_pvalue = pValReactive(),
                top = corrVarTop() # display top 10 couples of variables (by correlation coefficient)
       )
-      
+      # Corrolelogram
     } else if(input$corrTypeRadio == 3) {
       # correlogram
       ggstatsplot::ggcorrmat(
@@ -205,8 +206,6 @@ server <- shinyServer(function(input, output) {
       )
       
     }
-    
-    
   })
   
   # Columns for numeric summaries
@@ -221,6 +220,7 @@ server <- shinyServer(function(input, output) {
     summaries
   })
   
+  # Number of digits to use for rounding
   numDecimals <- reactive({
     decimals <- input$roundDigitsInput
     decimals
@@ -232,6 +232,7 @@ server <- shinyServer(function(input, output) {
     setDT(filteredKOI)
     koiDT <- data.table()
     
+    # Apply numeric summary functions to selected predictors
     for (i in chosenSummaries()) {
       koiDT <- rbind(koiDT, filteredKOI[ , lapply(.SD, i), .SDcols = chosenCol()])
     }
@@ -239,11 +240,13 @@ server <- shinyServer(function(input, output) {
     # Transpose in order to append new vars vertically and apply rounding
     koiDT <- t(round(koiDT, numDecimals()))
     
-    # Output final table, ensure column names atch summary type
+    # Output final table, ensure column names match summary type
     summTable <- datatable(koiDT, colnames = chosenSummaries())
     summTable
   })
   
+  #Keep same variable list for distribution and density plots, but alternate between number of bins/smooth options
+  # Distribution plot variables
   distributionVars <- reactive({
     distVars <- input$distributionXInput
     distVars
@@ -254,37 +257,33 @@ server <- shinyServer(function(input, output) {
     yVars
   })
   
+  # Scatter plot - "color by" variable
   scatterColorVar <- reactive({
     colorVar <- input$scatterColorVar
     colorVar
   })
   
+  # Check whether user desires logarithmic scale for plots
   scatterLogCheck <- reactive({
     logChoice <- input$scatterCheckGroup
     logChoice
   })
   
+  # Check desired number of bins
   distributionBins <- reactive({
     distBins <- input$numBinsInput
     distBins
   })
   
+  # Check smoothing parameter for density plot
   densitySmooth <- reactive({
     densSmooth <- input$widthBinsInput
     densSmooth
   })
   
-  
-  
-  
-  
-  
-  
   #------------------------------------------------------------------------------------------
   # --------------------------------Modeling-------------------------------------------------
   #------------------------------------------------------------------------------------------
-  
-  
   
   # Do not fit models until actionButton is clicked
   splitVals <- observeEvent(input$fit, {
@@ -301,6 +300,7 @@ server <- shinyServer(function(input, output) {
       folds
     })
     
+    # Set seed
     set.seed(seedNum())
     
     # Render caret formula
@@ -317,10 +317,7 @@ server <- shinyServer(function(input, output) {
     
     # Use user input to split filtered data into training and test sets
     dataSplit <- reactive({
-      
-      
       dataIndex <- createDataPartition(filteredKOI$koi_disposition_binary, p = (input$percentInput/100), list = FALSE)
-      
     })
     
     dataTrain <- reactive({
@@ -336,9 +333,6 @@ server <- shinyServer(function(input, output) {
       predModel <- input$predictionModel 
       predModel
     })
-    
-    
-    
     
     #--------------------------------------------------------------------------
     # Generalized linear regression
@@ -364,6 +358,7 @@ server <- shinyServer(function(input, output) {
     
     # Create generalized linear regression model
     glmTrain <- reactive({
+      # If user desires automatic model selection
       if(input$glmTune == 1) {
         glmFit <- train(glmPredList, 
                         data = dataTrain(),
@@ -374,7 +369,7 @@ server <- shinyServer(function(input, output) {
         
         
       } else {
-        
+        # If user wishes to manually specify parameters for glmnet (alpha and lambda)
         glmFit <- train(glmPredList, 
                         data = dataTrain(),
                         method = "glmnet",
@@ -382,8 +377,6 @@ server <- shinyServer(function(input, output) {
                         preProcess = c("center", "scale"),
                         tuneGrid = glmParamReactive(),
                         trControl = trainControl(method = "cv", number = kFolds()))
-        
-        
       }
       
       glmFit
@@ -415,7 +408,7 @@ server <- shinyServer(function(input, output) {
       df <- filteredCandidateKOI[, input$glmPredictors$right]
       predictCandidateGLM <- predict(glmTrain(), df, type = "prob")
       df <- data.frame(predictCandidateGLM, filteredCandidateKOI$kepid, filteredCandidateKOI$kepoi_name, df)
-      df <- rename(df, c("FALSE_POS_prob" = "X0", "CANDIDATE_prob" = "X1"))
+      df <- rename(df, c("FALSE_POS_prob" = "X0", "CONFIRMED_prob" = "X1"))
       datatable(df)
     })
     
@@ -437,14 +430,11 @@ server <- shinyServer(function(input, output) {
       datatable(df)
     })
     
-    
-    
-    
-    
     #--------------------------------------------------------------------------
     # Classification tree
     #--------------------------------------------------------------------------
     
+    # expand.grid for rpart using complexity as parameter
     complexityReactive <- reactive({
       cp <- expand.grid(cp = input$complexityInput)
       cp
@@ -457,6 +447,7 @@ server <- shinyServer(function(input, output) {
     })
     
     
+    # If user wishes to manually specify parameters, use expand.grid 
     if(input$classTune == 2) {
       # Create classification model
       rpartTrain <- reactive({
@@ -472,6 +463,7 @@ server <- shinyServer(function(input, output) {
     }
     
     else {
+      # Automatically create model using only specification for tuneLength
       # Create classification model
       rpartTrain <- reactive({
         rpartFit <- train(classTreePredList,
@@ -558,13 +550,8 @@ server <- shinyServer(function(input, output) {
                        trControl = trainControl(method = "cv", number = kFolds()),
                        ntree = ntreeReactive())
         rfFit
-        
-        
-        
       })
     }
-    
-    
     
     # Output random forest summary
     output$rfSummary <- renderPrint({
@@ -647,6 +634,7 @@ server <- shinyServer(function(input, output) {
       })
     )
     
+    # Predictio actionButton - output first prediction, then automatically update when user begins to input new values
     modelPredictions <- observeEvent(input$predictButton, {
       
       # Predict using GLM
@@ -707,10 +695,6 @@ server <- shinyServer(function(input, output) {
     })
     
   })
-  
-  
-  
-  
   
 })
 

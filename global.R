@@ -3,19 +3,22 @@
 # Authored by Maksim Nikiforov
 # NCSU ST 558 - Fall, 2021
 
-# Read data from CSV file.
-# Sourced from 
-# https://exoplanetarchive.ipac.caltech.edu/docs/program_interfaces.html
 library(DT)
 library(htmltools)
 library(caret)
 library(tidyverse)
 
-# API call - retrieve all available columns
+# Read data from CSV file.
+# Sourced from 
+# https://exoplanetarchive.ipac.caltech.edu/docs/program_interfaces.html
+
+# Optional API call - retrieve all available columns
 # dataKOI <- read_csv("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&select=*")
+
+# Read in all data (default columns and otherwise) from CSV file
 dataKOI <- read_csv("nph-nstedAPI_all.csv")
 
-
+# Read in data only with default columns
 defaultValKOI <- read_csv("nph-nstedAPI.csv")
 
 # Subset columns to exclude "CANDIDATE", "NOT DISPOSITIONED" Kepler objects,
@@ -24,6 +27,8 @@ defaultValKOI <- read_csv("nph-nstedAPI.csv")
 filteredKOI <- defaultValKOI %>% filter(koi_disposition == "CONFIRMED" | koi_disposition == "FALSE POSITIVE") %>%
   select(-contains("err"), -kepler_name, -koi_score, -koi_tce_delivname) %>% drop_na()
 
+# Filter data to include only "CANDIDATE" objects. 
+# These will be used as test data for supervised learning models
 filteredCandidateKOI <- defaultValKOI %>% filter(koi_disposition == "CANDIDATE") %>%
   select(-contains("err"), -kepler_name, -koi_score, -koi_tce_delivname) %>% drop_na()
 
@@ -45,6 +50,7 @@ dat <- data.frame(
   id = c("sub0", "sub0", "sub1", "sub1", "sub2")
 )
 
+# Optional search builder for data tables 
 dtable <- datatable(
   dat,
   options = list(
@@ -55,9 +61,11 @@ dtable <- datatable(
   )
 )
 
-path_to_searchBuilder <- # path to the folder containing the two searchBuilder files
+# Path to the folder containing the two searchBuilder files
+path_to_searchBuilder <- 
   normalizePath(".")
 
+# Datatatble searchBuilder dependencies
 dep <- htmlDependency(
   name = "searchBuilder",
   version = "1.0.0", 
