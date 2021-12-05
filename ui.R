@@ -1,4 +1,5 @@
 # KOI Exploration
+# ui.R
 # Authored by Maksim Nikiforov
 # NCSU ST 558 - Fall, 2021
 
@@ -352,6 +353,20 @@ ui <- dashboardPage(#skin="blue",
                                             box(width = 12,
                                                 
                                                 h4("Generalized linear regression parameters"),
+                                                radioButtons("glmTune", label = h4("Hyperparameter tuning"),
+                                                             choices = list("Auto (tuneLength)" = 1, "Manual (tuneGrid)" = 2), 
+                                                             selected = 1, inline = TRUE),
+                                                conditionalPanel(condition = "input.glmTune == 2",
+                                                                 radioButtons("glmAlphaInput", label = "alpha:",
+                                                                              choices = list("0" = 1, "1" = 2, "0:1" = 3), 
+                                                                              selected = 3, inline = TRUE),
+                                                                 splitLayout(
+                                                                   numericInput("glmLambdaMinInput", label = "lambda minimum:", value = 0.0001),
+                                                                   numericInput("glmLambdaMaxInput", label = "lambda maximum:", value = 1)
+                                                                 ),
+                                                                 splitLayout(
+                                                                   numericInput("glmLambdaLengthInput", label = "# of lambda values:", value = 100)
+                                                                 )),
                                                 h4("GLM predictors"),
                                                 chooserInput("glmPredictors", "Available frobs", "Selected frobs",
                                                              leftChoices = colnames(filteredKOI), size = 5, multiple = TRUE, rightChoices = c("koi_period", "koi_duration", "koi_prad", "koi_teq")

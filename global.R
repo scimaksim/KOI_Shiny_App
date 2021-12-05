@@ -1,3 +1,8 @@
+# KOI Exploration
+# global.R
+# Authored by Maksim Nikiforov
+# NCSU ST 558 - Fall, 2021
+
 # Read data from CSV file.
 # Sourced from 
 # https://exoplanetarchive.ipac.caltech.edu/docs/program_interfaces.html

@@ -1,8 +1,7 @@
-#---------------------------------------------------------------------------------------------------------------------------------------
-#
-# Server logic
-#
-#---------------------------------------------------------------------------------------------------------------------------------------
+# KOI Exploration
+# server.R
+# Authored by Maksim Nikiforov
+# NCSU ST 558 - Fall, 2021
 
 
 # Define server logic required to draw the plots
@@ -10,7 +9,7 @@ server <- shinyServer(function(input, output) {
   
   # Get column names for filtering data
   getData <- reactive({
-
+    
     # Stores names of user-selected columns for subsetting in output$tableKOI
     if (!is.null(input$select)) {
       columnNames <- input$select
@@ -23,33 +22,33 @@ server <- shinyServer(function(input, output) {
   
   # Render a datatable of KOIs, consider column input from getData() above    
   output$tableKOI <- DT::renderDT(#server = FALSE, 
-                                  {
-    # Include horizontal and vertical scrolling, render only visible portion of data,
-    # include buttons for downloading in CSV and XLSX,
-    # render DT in the client to allow all data or filtered to be downloaded.
-    datatable(defaultValKOI[, getData(), drop=FALSE], filter = 'top', extensions = c('Scroller'), 
-                        options = list(
-                                       scrollX = TRUE, 
-                                       deferRender = TRUE,
-                                       scrollY = 400,
-                                       scroller = TRUE,
-                                       dom = 'Qlfrtip')
-              )
-    # Subset the data set using SearchBuilder implementation with CSS and JS files
-    # https://www.datatables.net/extensions/searchbuilder/
-    # https://stackoverflow.com/questions/64773579/how-to-implement-datatables-option-in-shiny-r-syntax
-    # dep <- htmlDependency(
-    #   name = "searchBuilder",
-    #   version =https://stackoverflow.com/questions/41597062/r-download-filtered-datatable "1.0.0", 
-    #   src = path_to_searchBuilder,
-    #   script = "dataTables.searchBuilder.min.js",
-    #   stylesheet = "searchBuilder.dataTables.min.css",
-    #   all_files = FALSE
-    # )
-    
-    #dtable$dependencies <- c(dtable$dependencies, list(dep))
-
-  })
+    {
+      # Include horizontal and vertical scrolling, render only visible portion of data,
+      # include buttons for downloading in CSV and XLSX,
+      # render DT in the client to allow all data or filtered to be downloaded.
+      datatable(defaultValKOI[, getData(), drop=FALSE], filter = 'top', extensions = c('Scroller'), 
+                options = list(
+                  scrollX = TRUE, 
+                  deferRender = TRUE,
+                  scrollY = 400,
+                  scroller = TRUE,
+                  dom = 'Qlfrtip')
+      )
+      # Subset the data set using SearchBuilder implementation with CSS and JS files
+      # https://www.datatables.net/extensions/searchbuilder/
+      # https://stackoverflow.com/questions/64773579/how-to-implement-datatables-option-in-shiny-r-syntax
+      # dep <- htmlDependency(
+      #   name = "searchBuilder",
+      #   version =https://stackoverflow.com/questions/41597062/r-download-filtered-datatable "1.0.0", 
+      #   src = path_to_searchBuilder,
+      #   script = "dataTables.searchBuilder.min.js",
+      #   stylesheet = "searchBuilder.dataTables.min.css",
+      #   all_files = FALSE
+      # )
+      
+      #dtable$dependencies <- c(dtable$dependencies, list(dep))
+      
+    })
   
   # Download filtered data set
   # Based on response from https://stackoverflow.com/questions/53499066/downloadhandler-with-filtered-data-in-shiny
@@ -77,7 +76,7 @@ server <- shinyServer(function(input, output) {
     
     if (input$colorScatter) {
       scatterPlot <- scatterPlot + geom_point(aes_string(color = scatterColorVar()), 
-                 alpha = 0.6, position = "jitter") + theme_classic()
+                                              alpha = 0.6, position = "jitter") + theme_classic()
     } else {
       scatterPlot <- scatterPlot + geom_point(alpha = 0.6, position = "jitter") + theme_classic()
     }
@@ -86,13 +85,13 @@ server <- shinyServer(function(input, output) {
     # If "Log X" is selected  
     if (1 %in% scatterLogCheck()) {
       scatterPlot <- scatterPlot + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                             labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
+                                                 labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
     }
     
     # If "Log Y" is selected
     if (2 %in% scatterLogCheck()) {
       scatterPlot <- scatterPlot + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                             labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
+                                                 labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
     }
     
     # Output final scatter plot
@@ -116,44 +115,44 @@ server <- shinyServer(function(input, output) {
   
   # Distribution plot  
   output$histogramPlot <- renderPlot({
+    
+    # Get user var selection for histogram
+    selectedVar <- densityVarChoice()
+    
+    # Plot histogram
+    histo <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
+      geom_histogram(bins = distributionBins(), fill = '#108A99', color = 'white') +
+      theme_classic()
+    
+    # If checkbox is selected, use a log10 scale for x-axis
+    if(1 %in% input$distributionLogCheck){
+      histo <- histo + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                                     labels = scales::trans_format("log10", scales::math_format(10^.x)))
       
-      # Get user var selection for histogram
-      selectedVar <- densityVarChoice()
+      histo
       
-      # Plot histogram
-      histo <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
-        geom_histogram(bins = distributionBins(), fill = '#108A99', color = 'white') +
-        theme_classic()
+    } else {
       
-      # If checkbox is selected, use a log10 scale for x-axis
-      if(1 %in% input$distributionLogCheck){
-        histo <- histo + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                              labels = scales::trans_format("log10", scales::math_format(10^.x)))
-        
-        histo
-        
-      } else {
-        
-        # Output final histogram
-        histo
-      }
-
-    })
+      # Output final histogram
+      histo
+    }
+    
+  })
   
   # Density plot  
   output$densityPlot <- renderPlot({
-      densityPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
-        geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5) +
-        theme_classic()
-      
-      if(1 %in% input$densityLogCheck){
-        densityPlot <- densityPlot + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
-                                                   labels = scales::trans_format("log10", scales::math_format(10^.x)))
-        densityPlot
-      } else {
-        
+    densityPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
+      geom_density(adjust = densitySmooth(), fill = "blue", alpha = 0.5) +
+      theme_classic()
+    
+    if(1 %in% input$densityLogCheck){
+      densityPlot <- densityPlot + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                                                 labels = scales::trans_format("log10", scales::math_format(10^.x)))
       densityPlot
-}
+    } else {
+      
+      densityPlot
+    }
     
   })
   
@@ -177,7 +176,7 @@ server <- shinyServer(function(input, output) {
     selectedVar <- input$corrSingleVar
     as.name(selectedVar)
   })
-
+  
   # Correlation plot
   output$corrCrossPlot <- renderPlot({
     
@@ -275,9 +274,9 @@ server <- shinyServer(function(input, output) {
     densSmooth
   })
   
-
-
-
+  
+  
+  
   
   
   
@@ -344,16 +343,49 @@ server <- shinyServer(function(input, output) {
     #--------------------------------------------------------------------------
     # Generalized linear regression
     #--------------------------------------------------------------------------    
+    # Alpha param for GLM
+    alphaReactive <- reactive({
+      if(input$glmAlphaInput == 1) {
+        alphaNum <- 0
+      } else if (input$glmAlphaInput == 1) {
+        alphaNum <- 1
+      } else if (input$glmAlphaInput == 3) {
+        alphaNum <- 0:1
+      }
+      alphaNum
+    })
     
+    # Tune grid for GLM
+    glmParamReactive <- reactive({
+      paramTuneGrid <- expand.grid(alpha = alphaReactive(),
+                                   lambda = seq(input$glmLambdaMinInput, input$glmLambdaMaxInput, length = input$glmLambdaLengthInput))
+      paramTuneGrid
+    })
     
     # Create generalized linear regression model
     glmTrain <- reactive({
-      glmFit <- train(glmPredList, 
-                      data = dataTrain(),
-                      method = "glmnet",
-                      family = "binomial",
-                      preProcess = c("center", "scale"),
-                      trControl = trainControl(method = "cv", number = kFolds()))
+      if(input$glmTune == 1) {
+        glmFit <- train(glmPredList, 
+                        data = dataTrain(),
+                        method = "glmnet",
+                        family = "binomial",
+                        preProcess = c("center", "scale"),
+                        trControl = trainControl(method = "cv", number = kFolds()))
+        
+        
+      } else {
+        
+        glmFit <- train(glmPredList, 
+                        data = dataTrain(),
+                        method = "glmnet",
+                        family = "binomial",
+                        preProcess = c("center", "scale"),
+                        tuneGrid = glmParamReactive(),
+                        trControl = trainControl(method = "cv", number = kFolds()))
+        
+        
+      }
+      
       glmFit
     })
     
@@ -573,7 +605,7 @@ server <- shinyServer(function(input, output) {
         varName <- input$glmPredictors$right[i]
         
         # Retrieve sample values from first row of "CANDIDATE" observations
-        varVal <- eval(parse(text = paste0("filteredCandidateKOI$", varName, "[1]"))) 
+        varVal <- eval(parse(text = paste0("filteredCandidateKOI$", varName, "[2]"))) 
         
         # Create numericInput fields with sample values
         numericInput(inputId = paste0(input$glmPredictors$right[i], "_weight"), label = input$glmPredictors$right[i], value = varVal)
