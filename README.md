@@ -11,7 +11,7 @@ To install the requisite packages for this application, run
 ```
 install.packages(c("shiny", "shinydashboard", "dashboardthemes",
 "DT", "htmltools", "latex2exp", "tidyverse", "ggrepel", "grid",
-"caret", "lares", "data.table", "rpart.plot", "randomForest", "glmnet", "Cairo", "ggplot2", "ggcorrplot))
+"caret", "lares", "data.table", "rpart.plot", "randomForest", "glmnet", "Cairo", "ggplot2", "ggcorrplot"))
 ```
 
 ## Launch instructions
