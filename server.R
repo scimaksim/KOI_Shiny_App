@@ -72,30 +72,28 @@ server <- shinyServer(function(input, output) {
   # Create scatter plot
   output$scatterPlot <- renderPlot({
     scatterPlot <- ggplot(defaultValKOI, aes_string(x = distributionVars(), y = scatterYVars()))
-    
-    if (input$colorScatter) {
+    # If user selects 'color', add color aesthetic
+    if (input$scatterColorVar != "None") {
       scatterPlot <- scatterPlot + geom_point(aes_string(color = scatterColorVar()), 
                                               alpha = 0.6, position = "jitter") + theme_classic()
+      # If users does not select 'color', present scatter plot in plain color
     } else {
       scatterPlot <- scatterPlot + geom_point(alpha = 0.6, position = "jitter") + theme_classic()
     }
     
-    
-    # If "Log X" is selected  
+    # If "Log X" is selected for scatter plot, add layer  
     if (1 %in% scatterLogCheck()) {
       scatterPlot <- scatterPlot + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                                                  labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^3))
     }
     
-    # If "Log Y" is selected
+    # If "Log Y" is selected for scatter plot, add layer
     if (2 %in% scatterLogCheck()) {
       scatterPlot <- scatterPlot + scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                                                  labels = scales::trans_format("log10", scales::math_format(10^.x)), limits = c(10^0, 10^4))
     }
-    
     # Output final scatter plot
     scatterPlot
-    
   })
   
   # Find information about selected point in the scatter plot
@@ -119,23 +117,27 @@ server <- shinyServer(function(input, output) {
     selectedVar <- densityVarChoice()
     
     # Plot histogram
-    histo <- ggplot(defaultValKOI, aes_string(x = distributionVars())) +
-      geom_histogram(bins = distributionBins(), fill = '#108A99', color = 'white') +
-      theme_classic()
+    histo <- ggplot(defaultValKOI, aes_string(x = distributionVars()))
+      
     
-    # If checkbox is selected, use a log10 scale for x-axis
+    if(input$histColorInput == "None") {
+      histo <- histo + geom_histogram(bins = distributionBins(), fill = '#108A99', color = 'white') +
+        theme_classic()
+    } else {
+      histo <- histo + geom_histogram(bins = distributionBins(), aes_string(fill = input$histColorInput), position = input$barPositionInput, color = 'white') +
+        theme_classic()
+    }
+    
+    # If 'log' checkbox is selected, add a log10 layer for x-axis
     if(1 %in% input$distributionLogCheck){
       histo <- histo + scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                                      labels = scales::trans_format("log10", scales::math_format(10^.x)))
-      
+      # Render histogram with log layer
       histo
-      
     } else {
-      
-      # Output final histogram
+      # Output final histogram (no log)
       histo
     }
-    
   })
   
   # Density plot  

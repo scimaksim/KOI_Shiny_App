@@ -164,13 +164,19 @@ ui <- dashboardPage(#skin="blue",
                                   conditionalPanel(condition = "input.selectPlotInput == 'Histogram' || input.selectPlotInput == 'Density'",
                                                    selectInput("distributionXInput", "x variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_period")
                                   ),
+                                  # Histogram with options for log scale, fill color
                                   conditionalPanel(condition = "input.selectPlotInput == 'Histogram'",
                                                    sliderInput("numBinsInput", "Number of bins",
                                                                min = 5, max = 50, value = 10, step = 5),
                                                    checkboxGroupInput("distributionLogCheck", label = "Plot options", 
                                                                       choices = list("Logarithmic scale" = 1),
-                                                                      selected = 1)
+                                                                      selected = 1),
+                                                   selectInput('histColorInput', 'Fill color', c("None", colnames(defaultValKOI)), selectize=TRUE, selected = "None"),
+                                                   conditionalPanel(condition = "input.histColorInput != 'None'",
+                                                                    selectInput('barPositionInput', 'Position', c("dodge", "stack", "fill", "identity"), selectize=TRUE, selected = "dodge")
+                                                   )
                                   ),
+                                  # Density plot
                                   conditionalPanel(condition = "input.selectPlotInput == 'Density'",
                                                    sliderInput("widthBinsInput", "Smooth", 
                                                                min = 0.1, max = 3, value = 1, step = 0.1),
@@ -178,15 +184,13 @@ ui <- dashboardPage(#skin="blue",
                                                                       choices = list("Logarithmic scale" = 1),
                                                                       selected = 1)
                                   ),
+                                  # Scatter plot with options for log scale (X and Y), fill color
                                   conditionalPanel(condition = "input.selectPlotInput == 'Scatter'",
                                                    selectInput("distributionXInput", "x variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_period"),
                                                    selectInput("distributionYInput", "y variable", colnames(select_if(defaultValKOI, is.numeric)), multiple=TRUE, selectize=FALSE, selected = "koi_prad"),
                                                    checkboxGroupInput("scatterCheckGroup", label = "Plot options", 
-                                                                      choices = list("Log X" = 1, "Log Y" = 2), selected = c(1, 2)),
-                                                   checkboxInput("colorScatter", label = "Color by...", value = TRUE),
-                                                   conditionalPanel(condition = "input.colorScatter == 1",
-                                                                    selectInput("scatterColorVar", "Color", colnames(defaultValKOI), multiple=FALSE, selectize=FALSE, selected = "koi_disposition")
-                                                   )
+                                                                      choices = list("Log X" = 1, "Log Y" = 2), selected = c(1, 2), inline = TRUE),
+                                                   selectInput("scatterColorVar", "Color", c("None", colnames(defaultValKOI)), multiple=FALSE, selectize=FALSE, selected = "koi_disposition")
                                   ),
                                   conditionalPanel(condition = "input.selectPlotInput == 'Correlation'",
                                                    radioButtons("corrTypeRadio", label = "Correlation plot",
