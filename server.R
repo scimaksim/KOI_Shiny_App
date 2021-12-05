@@ -66,7 +66,6 @@ server <- shinyServer(function(input, output) {
     }
   )
   
-  
   #-------------------- Create scatter plot and histogram--------------
   #--------------------------------------------------------------------
   

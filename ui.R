@@ -65,17 +65,19 @@ ui <- dashboardPage(#skin="blue",
                        box(#background="blue",
                          width=12,
                          tags$video(id="transitVideo",  src = "Exoplanet_Double_Transit-HD_1080p.webm", width = "100%", height = "100%", controls = "controls"),
-                         h6("Source: NASA, ", tags$a(href="https://svs.gsfc.nasa.gov/13022", "Exoplanet Transit Animations")),
+                         h6("Light curves produced by two transiting planets with different radii. Kepler monitored the brightness of approximately 150,000 stars and led to the discovery of over 2,400 confirmed exoplanets. Source: NASA, ", tags$a(href="https://svs.gsfc.nasa.gov/13022", "Exoplanet Transit Animations")),
                          br(),
                          h4("NASA's Kepler space telescope launched in 2009 'to search for Earth-sized and smaller planets in the habitable zone of other stars in our neighborhood of the galaxy'. This application explores some of its vetted findings - the so-called 'Kepler Objects of Interest' (KOIs)."),
                          h4("The source of the data is the ", span("cumulative",style = "font-style:italic"), " Kepler Objects of Interest Table in the ", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/index.html", "NASA Exoplanet Archive."), "Its intent is to 'provide the most accurate dispositions and stellar and planetary information for all KOIs in one place'. Additional information is available ", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/docs/PurposeOfKOITable.html#cumulative", "here.")),
-                         h4("A description for each data column is ", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/docs/API_kepcandidate_columns.html", "also available."), "Only default columns, designated with '†', are used in this application."),
+                         h4("Observations in this table are classified as a 'confirmed' exoplanet, a 'candidate' object, or as a 'false positive'. Borucki et. al. define false positives as 'transit-like signals that are not caused by a transiting planet' (Borucki et al., 2010). 
+                            Conversely, a 'candidate' has 'passed all prior tests conducted to identify false positives' (NASA Exoplanet Archive, 2019). This classification, or object 'disposition', is used as a target variable for a generalized linear model and ensemble learning. Models are first trained on data with 'confirmed' and 'false positive' observations. Subsequently, they are applied to data with 'candidate' observations to gauge the probability of those observations being 'confirmed' exoplanets or 'false positives'."),
+                         h4("A description for each data column and potential predictor is ", tags$a(href="https://exoplanetarchive.ipac.caltech.edu/docs/API_kepcandidate_columns.html", "also available."), "Only default columns, designated with '†', are used in this application."),
                          h4("This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with the National Aeronautics and Space Administration under the Exoplanet Exploration Program."),
-                         img(src='logos.png', height="75%", width="75%")
+                         img(src='logos.png', height="75%", width="75%", style="display: block; margin-left: auto; margin-right: auto;")
                        )
                 ),
                 column(4,
-                       # How to use the apphttps://www.programmingr.com/examples/neat-tricks/r-citation/
+                       # How to use the app
                        h2("How to use the app"),
                        box(#background="blue",
                          width=12,
@@ -88,14 +90,16 @@ ui <- dashboardPage(#skin="blue",
                      h2("References"),
                      box(#background="blue",
                        width=12,
+                       h4("Borucki, W. J., Koch, D., Basri, G., Batalha, N., Brown, T., Caldwell, D., Caldwell, J., Christensen-Dalsgaard, J., Cochran, W. D., DeVore, E., Dunham, E. W., Dupree, A. K., Gautier, T. N., 3rd, Geary, J. C., Gilliland, R., Gould, A., Howell, S. B., Jenkins, J. M., Kondo, Y., Latham, D. W., … Prsa, A. (2010). Kepler planet-detection mission: introduction and first results.", em("Science (New York, N.Y.), 327", "(5968), 977–980. https://doi.org/10.1126/science.1185402")),
                        h4("James G., Witten D., Hastie T., Tibshirani R. (2021) Tree-Based Methods. In: An Introduction to Statistical Learning. Springer Texts in Statistics. Springer, New York, NY. https://doi.org/10.1007/978-1-0716-1418-1_8"),
                        h4("Lissauer, J., Dawson, R. & Tremaine, S. Advances in exoplanet science from Kepler.", em("Nature"), "513, 336–344 (2014). https://doi.org/10.1038/nature13781"),
                        h4("NASA Exoplanet Archive. (2019). Kepler Objects of Interest Cumulative Table [Data set]. IPAC. https://doi.org/10.26133/NEA4"),
                        h4("North Carolina State University. (2021). Data Science for Statisticians. NCSU ST 558 601 online classroom, archived at https://wolfware.ncsu.edu/courses/details/?sis_id=SIS:2021:8:1:ST:558:601"),
                        h4("R Core Team (2021). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.")
-                     ))
-              
-      )),
+                       )
+                     )
+                )
+              ),
       
       #------------------------------------------------------------------------------------------------------------                        
       #-------------------------------"Data" page------------------------------------------------------------------
