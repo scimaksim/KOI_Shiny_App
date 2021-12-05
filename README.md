@@ -19,7 +19,7 @@ install.packages(c("shiny", "shinydashboard", "dashboardthemes",
 To launch this application in R, run 
 
 ```
-shiny::runGitHub("NASA_KOI", "scimaksim", ref = "main")
+shiny::runGitHub("KOI_Shiny_App", "scimaksim", ref = "main")
 ```
 
 Alternatively, this application can be accessed at https://scimaksim.shinyapps.io/nasa_koi/.
